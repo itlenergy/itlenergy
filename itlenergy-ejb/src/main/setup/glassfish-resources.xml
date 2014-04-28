@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE resources PUBLIC "-//GlassFish.org//DTD GlassFish Application Server 3.1 Resource Definitions//EN" "http://glassfish.org/dtds/glassfish-resources_1_5.dtd">
+<resources>
+    <jdbc-connection-pool name="ItlEnergyPool" res-type="javax.sql.ConnectionPoolDataSource"
+            datasource-classname="org.postgresql.ds.PGConnectionPoolDataSource"
+            pool-resize-quantity="2" max-pool-size="32" steady-pool-size="2"
+            statement-timeout-in-seconds="60" >
+        <property name="serverName" value="localhost" />
+        <property name="portNumber" value="5432" />
+        <property name="databaseName" value="itlenergy" />
+        <property name="User" value="itlenergy" />
+        <property name="Password" value="itlenergy" />
+    </jdbc-connection-pool>
+
+    <jdbc-resource jndi-name="java:app/jdbc/itlenergy" pool-name="ItlEnergyPool" />
+</resources>

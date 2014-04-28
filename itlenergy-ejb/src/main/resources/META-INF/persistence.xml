@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+  <persistence-unit name="com.itl_energy" transaction-type="JTA">
+    <jta-data-source>java:app/jdbc/itlenergy</jta-data-source>
+    <class>com.itl_energy.model.Users</class>
+    <class>com.itl_energy.model.Hub</class>
+    <class>com.itl_energy.model.HubLog</class>
+    <class>com.itl_energy.model.Weather</class>
+    <class>com.itl_energy.model.User</class>
+    <class>com.itl_energy.model.Sensor</class>
+    <class>com.itl_energy.model.StatusEvent</class>
+    <class>com.itl_energy.model.Measurement</class>
+    <class>com.itl_energy.model.DeployedSensor</class>
+    <class>com.itl_energy.model.Site</class>
+    <class>com.itl_energy.model.House</class>
+    <exclude-unlisted-classes>false</exclude-unlisted-classes>
+    <properties/>
+  </persistence-unit>
+</persistence>
