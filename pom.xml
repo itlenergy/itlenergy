@@ -10,5 +10,6 @@
     <module>itlenergy-web</module>
     <module>itlenergy-ear</module>
     <module>itlenergy-ejb</module>
+    <module>itlenergy-webclient</module>
   </modules>
 </project>
