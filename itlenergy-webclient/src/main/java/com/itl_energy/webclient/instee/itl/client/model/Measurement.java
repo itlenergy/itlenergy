@@ -22,6 +22,12 @@ public class Measurement {
         this.observationTime = observationTime;
         this.observation = observation;
     }
+    
+    
+    public Measurement(String observationTime, double observation) {
+        this.observationTime = observationTime;
+        this.observation = observation;
+    }
 
     public Measurement() {
         this.measurementId = -1;

@@ -1,15 +1,16 @@
 package com.itl_energy.webclient.instee.alertme.client;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-
-import com.itl_energy.webclient.instee.alertme.client.AMWSInterface.AlertMeHub;
 import com.itl_energy.webclient.instee.itl.client.model.DeployedSensor;
 import com.itl_energy.webclient.instee.itl.client.model.Measurement;
+import com.itl_energy.webclient.instee.itl.client.util.ApiClient;
+import com.itl_energy.webclient.instee.itl.client.util.ApiException;
+import com.itl_energy.webclient.instee.itl.client.util.ApiResponse;
 import com.itl_energy.webclient.instee.itl.client.util.ITLClientUtilities;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Refactored interface to the AlertMe web service
@@ -21,7 +22,7 @@ public class AMSWSInterface2 {
 
     protected String token;
     protected String hubid;
-    protected String user;
+    protected String username;
     protected String password;
     protected List<String> deviceIds;
     protected Map<String, String> ids2device;
@@ -29,129 +30,142 @@ public class AMSWSInterface2 {
     protected static final String urlbase = "https://api.alertme.com/v5";
 
     public AMSWSInterface2() {
-        this.deviceIds = new ArrayList<String>();
-        this.ids2device = new HashMap<String, String>();
+        this.deviceIds = new ArrayList<>();
+        this.ids2device = new HashMap<>();
     }
 
-    public boolean authenticateUser(String uname, String pwd) {
-        this.user = uname;
-        this.password = pwd;
+    public boolean authenticateUser(String username, String password) throws ApiException {
+        this.username = username;
+        this.password = password;
 
-        String alertMeArgs = "username=" + this.user + "&password=" + this.password + "&caller=ITL";
-        String alertMeURL = AMSWSInterface2.urlbase + "/login";
-        String response = ITLClientUtilities.makeHTTPSPostRequest(alertMeURL, alertMeArgs);
+        try {
+            ApiClient client = new ApiClient("%s/login", urlbase);
+            client.data("username", username);
+            client.data("password", password);
+            client.data("caller", "ITL");
 
-        if (!response.isEmpty()) {
-            Map<?, ?> mp = ITLClientUtilities.parseJSONResponseToMap(response);
-            LinkedList<?> allhubs = (LinkedList<?>) mp.get("hubIds");//
-            String cookie = (String) mp.get("ApiSession");
+            ApiResponse response = client.post();
 
-            this.hubid = allhubs.getFirst().toString();
-            this.token = "ApiSession=" + cookie;
+            if (response.getStatusCode() == 200) {
+                Map<String, Object> map = response.deserialise(Map.class);
+                List<String> allhubs = (ArrayList<String>) map.get("hubIds");
 
-            return true;
-        }
-
-        return false;
-    }
-
-    public List<String> getHubsForUser() {
-        String alertMeURL = AMSWSInterface2.urlbase + "/users/" + this.user + "/hubs";
-        String response = ITLClientUtilities.makeHTTPSGetRequest(alertMeURL, this.token);
-        List<String> hubs = new ArrayList<String>();
-
-        if (!response.isEmpty()) {
-            List<?> l = ITLClientUtilities.parseJSONResponseToList(response);
-
-            for (int i = 0; i < l.size(); i++) {
-                hubs.add((String) ((Map<?, ?>) l.get(i)).get(AlertMeHub.ID_KEY));
+                this.hubid = allhubs.get(0);
+                this.token = "ApiSession=" + (String) map.get("ApiSession");
+                return true;
             }
-
-            return hubs;
+            else {
+                return false;
+            }
         }
+        catch (IOException ex) {
+            throw new ApiException(ex);
+        }
+    }
 
+    public AlertMeDevice[] getHubsForUser() throws ApiException {
+        try {
+            ApiClient client = new ApiClient("%s/users/%s/hubs", urlbase, username);
+            client.cookie(token);
+
+            ApiResponse response = client.get();
+
+            if (response.getStatusCode() == 200) {
+                return response.deserialise(AlertMeDevice[].class);
+            }
+            else {
+                throw new ApiException(String.format(
+                        "Error getting hubs (status code %d).", response.getStatusCode()));
+            }
+        }
+        catch (IOException ex) {
+            throw new ApiException(ex);
+        }
+    }
+
+    public AlertMeDevice[] getDevicesForHub() throws ApiException {
+        try {
+            ApiClient client = new ApiClient("%s/users/%s/hubs/%s/devices", urlbase, username, this.hubid);
+            client.cookie(token);
+
+            ApiResponse response = client.get();
+
+            if (response.getStatusCode() == 200) {
+                return response.deserialise(AlertMeDevice[].class);
+            }
+            else {
+                throw new ApiException(String.format(
+                        "Error getting hubs (status code %d).", response.getStatusCode()));
+            }
+        }
+        catch (IOException ex) {
+            throw new ApiException(ex);
+        }
+    }
+
+    
+    public AlertMeChannel getChannel(String deviceName, String deviceId, String channel, String operation, String start, String end, int interval) throws IOException {
+        ApiClient client = new ApiClient("%s/users/%s/hubs/%s/devices/%s/%s/channels/%s",
+                urlbase, username, hubid, deviceName, deviceId, channel);
+
+            client.cookie(token);
+            client.data("start", "" + (ITLClientUtilities.timeToUTC(start) / 1000));
+            client.data("end", "" + (ITLClientUtilities.timeToUTC(end) / 1000));
+            client.data("interval", Integer.toString(interval));
+            client.data("operation", operation);
+
+            ApiResponse response = client.get();
+            return response.deserialise(AlertMeChannel.class);
+    }
+    
+    
+    public AlertMeChannel getPowerFromMeter(String deviceId, String start, String end, int interval) throws IOException {
+        return getChannel("MeterReader", deviceId, "power", "max+min", start, end, interval).toHalfHourly();
+    }
+    
+    
+    public AlertMeChannel getEnergyAdvancesFromMeter(String deviceId, String start, String end, int interval) throws IOException {
+        return getChannel("MeterReader", deviceId, "energy", "max+min", start, end, interval);
+    }
+    
+    
+    public AlertMeChannel getAllDailyEnergyAdvancesFromMeter(String deviceId) throws IOException {
+        //TODO
         return null;
     }
-
-    public Map<String, String> getDevicesForHub() {
-        String alertMeURL = AMSWSInterface2.urlbase + "/users/" + this.user + "/hubs/" + this.hubid + "/devices";
-        String response = ITLClientUtilities.makeHTTPSGetRequest(alertMeURL, this.token);
-        Map<String, String> devs = new HashMap<String, String>();
-        Map<String, String> desc = new HashMap<String, String>();
-
-        if (!response.isEmpty()) {
-            List<?> lst = ITLClientUtilities.parseJSONResponseToList(response);
-
-            for (int i = 0; i < lst.size(); i++) {
-                devs.put((String) ((Map<?, ?>) lst.get(i)).get("id"), (String) ((Map<?, ?>) lst.get(i)).get("type"));
-                desc.put((String) ((Map<?, ?>) lst.get(i)).get("id"), (String) ((Map<?, ?>) lst.get(i)).get("name"));
-            }
-
-            return devs;
-        }
-
-        return null;
+    
+    
+    public AlertMeChannel getAmbientTemperatureFromDevice(String deviceName, String deviceId, String start, String end, int interval) throws IOException {
+        return getChannel(deviceName, deviceId, "temperature", "max+min+average", start, end, interval);
     }
+    
 
-    /**
-     * Generic function for extracting measurements.
-     *
-     */
-    public List<Measurement> getMeasurementForDevice(String channel, String deviceid, String devicename, int interval, String dateStart, String dateEnd) {
-        List<Measurement> measures = new ArrayList<Measurement>();
-        String alertMeArgs = "?start=" + ITLClientUtilities.timeToUTC(dateStart) / 1000 + "&end=" + ITLClientUtilities.timeToUTC(dateEnd) / 1000 + "&interval=" + interval + "&operation=max+min";
-        String alertMeURL = AMSWSInterface2.urlbase + "/users/" + this.user + "/hubs/" + this.hubid + "/devices/" + devicename + "/" + deviceid + "/channels/" + channel + alertMeArgs;
-        String response = ITLClientUtilities.makeHTTPSGetRequest(alertMeURL, this.token);
-
-        return measures;
-    }
-
-    public List<Measurement> getEnergyMeasurementForDeviceAtHalfHour(String deviceid, String dateStart, String dateEnd) {
-        List<Measurement> measures = new ArrayList<Measurement>();
-        int interval = 120;
-        String alertMeArgs = "?start=" + ITLClientUtilities.timeToUTC(dateStart) / 1000 + "&end=" + ITLClientUtilities.timeToUTC(dateEnd) / 1000 + "&interval=" + interval + "&operation=max+min";
-        String alertMeURL = AMSWSInterface2.urlbase + "/users/" + this.user + "/hubs/" + this.hubid + "/devices/MeterReader/" + deviceid + "/channels/energy" + alertMeArgs;
-        String response = ITLClientUtilities.makeHTTPSGetRequest(alertMeURL, this.token);
-
-        if (!response.isEmpty()) {
-            Map<?, ?> mp = ITLClientUtilities.parseJSONResponseToMap(response);
-            Long begin = (Long) mp.get("start");
-            Long nd = (Long) mp.get("end");
-            Long ival = (Long) mp.get("interval");
-            Map<?, ?> vals = (Map<?, ?>) mp.get("values");
-            LinkedList<?> max = (LinkedList<?>) vals.get("max");
-
-            //need to offset this to align with the hour/half hour
-            long resid = begin.longValue() % 1800L;
-            int offset = 0;
-
-            if (resid != 0) {
-                offset = (int) ((1800L - resid) / ival.longValue());
+    public List<Measurement> getEnergyMeasurementForDeviceAtHalfHour(String deviceid, String dateStart, String dateEnd) throws ApiException {
+        try {
+            AlertMeChannel channel = getChannel("MeterReader", deviceid, "energy", "max", dateStart, dateEnd, 120)
+                .toHalfHourly();
+            
+            long time = channel.getStart() * 1000;
+            
+            //get the half hourly results
+            List<Measurement> measurements = new ArrayList<>();
+            
+            for (Double observation: channel.getMax()) {
+                String strtime = ITLClientUtilities.utcToTime(time);
+                measurements.add(new Measurement(strtime, observation));
+                
+                time += 1800000;
             }
-
-            for (int i = offset; i < max.size(); i += 15) {
-                Measurement measure = new Measurement();
-
-                measure.setObservationTime(ITLClientUtilities.utcToTime((begin.longValue() * 1000L) + (resid + interval * i) * 1000L));
-
-                if (max.get(i) instanceof Double) {
-                    measure.setObservation(((Double) max.get(i)).doubleValue());
-                }
-                if (max.get(i) instanceof Long) {
-                    measure.setObservation(((Long) max.get(i)).longValue());
-                }
-
-                measures.add(measure);
-            }
-
-            return measures;
+            
+            return measurements;
         }
-
-        return null;
+        catch (IOException ex) {
+            throw new ApiException(ex);
+        }
     }
 
     public List<DeployedSensor> getSensorsForPlatform() {
-        List<DeployedSensor> allsense = new ArrayList<DeployedSensor>();
+        List<DeployedSensor> allsense = new ArrayList<>();
         DeployedSensor itemp = new DeployedSensor();
         DeployedSensor otemp = new DeployedSensor();
         DeployedSensor ihum = new DeployedSensor();
