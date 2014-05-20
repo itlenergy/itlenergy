@@ -11,36 +11,36 @@ package com.itl_energy.webclient.instee.itl.client.model;
  */
 public class DeploymentSite {
 
-    protected int siteid;
+    protected int siteId;
     protected double latitude;
     protected double longitude;
     protected double altitude;
-    protected String name;
+    protected String siteName;
 
     public DeploymentSite(int siteid, double latitude, double longitude, double altitude, String name) {
         super();
-        this.siteid = siteid;
+        this.siteId = siteid;
         this.latitude = latitude;
         this.longitude = longitude;
         this.altitude = altitude;
-        this.name = name;
+        this.siteName = name;
     }
 
     public DeploymentSite() {
         super();
-        this.siteid = -1;
+        this.siteId = -1;
         this.latitude = 0.0;
         this.longitude = 0.0;
         this.altitude = 0.0;
-        this.name = "";
+        this.siteName = "";
     }
 
     public int getSiteid() {
-        return siteid;
+        return siteId;
     }
 
     public void setSiteid(int siteid) {
-        this.siteid = siteid;
+        this.siteId = siteid;
     }
 
     public double getLatitude() {
@@ -68,10 +68,10 @@ public class DeploymentSite {
     }
 
     public String getName() {
-        return name;
+        return siteName;
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.siteName = name;
     }
 }

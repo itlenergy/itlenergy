@@ -144,16 +144,4 @@ public class ITLNonBroadbandSIMReader {
             }
         }
     }
-
-    public static void main(String[] args) {
-        String directory = "D:\\non-broadband";
-
-        try {
-            ITLNonBroadbandSIMReader itl = new ITLNonBroadbandSIMReader(directory);
-        }
-        catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-    }
 }

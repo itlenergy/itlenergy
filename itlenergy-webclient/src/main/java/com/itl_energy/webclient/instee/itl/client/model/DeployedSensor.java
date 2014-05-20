@@ -10,28 +10,28 @@ package com.itl_energy.webclient.instee.itl.client.model;
  */
 public class DeployedSensor {
 
-    protected int typeid;
+    protected int typeId;
     protected String description;
     protected String measurementUnits;
 
     public DeployedSensor() {
         super();
-        this.typeid = -1;
+        this.typeId = -1;
     }
 
     public DeployedSensor(int typeid, String description, String measurementUnits) {
         super();
-        this.typeid = typeid;
+        this.typeId = typeid;
         this.description = description;
         this.measurementUnits = measurementUnits;
     }
 
     public int getTypeid() {
-        return typeid;
+        return typeId;
     }
 
     public void setTypeid(int typeid) {
-        this.typeid = typeid;
+        this.typeId = typeid;
     }
 
     public String getDescription() {

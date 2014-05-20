@@ -1,16 +1,18 @@
 package com.itl_energy.webclient.instee.netatmo.client;
 
+import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import com.itl_energy.webclient.instee.itl.client.model.DeployedSensor;
 import com.itl_energy.webclient.instee.itl.client.model.Measurement;
+import com.itl_energy.webclient.instee.itl.client.util.ApiClient;
+import com.itl_energy.webclient.instee.itl.client.util.ApiException;
+import com.itl_energy.webclient.instee.itl.client.util.ApiResponse;
 import com.itl_energy.webclient.instee.itl.client.util.ITLClientUtilities;
-import com.itl_energy.webclient.instee.itl.client.util.ITLHTTPResponse;
+import java.text.ParseException;
 
 /**
  * Interface to NetAtmo Web Service.
@@ -24,10 +26,6 @@ public class NetatmoWSInterface {
 
     protected String authtoken;
     protected String refreshtoken;
-    protected String user;
-    protected String password;
-    protected String secret;
-    protected String clientid;
 
     protected Map<String, String> station2device;
     protected Map<String, String> device2module;
@@ -60,63 +58,54 @@ public class NetatmoWSInterface {
      26 : Maximum usage of the API has been reached by application
      */
     public NetatmoWSInterface() {
-        this.station2device = new HashMap<String, String>();
-        this.device2module = new HashMap<String, String>();
+        this.station2device = new HashMap<>();
+        this.device2module = new HashMap<>();
     }
 
-    public boolean authenticateUser(String uname, String pwd, String cid, String secret) {
-        this.user = uname;
-        this.password = pwd;
-        this.clientid = cid;
-        this.secret = secret;
+    public boolean authenticateUser(String user, String password, String clientid, String secret) throws ApiException {
+        ApiClient client = new ApiClient(urlbase + "/oauth2/token");
+        client.data("grant_type", "password");
+        client.data("client_secret", secret);
+        client.data("username", user);
+        client.data("password", password);
 
-        String path = "/oauth2/token";
-        String[][] hargs = {{"Content-Type", " application/x-www-form-urlencoded;charset=UTF-8"}, {"Accept", "application/json"}};
+        ApiResponse response = client.post();
 
-        String params = "grant_type=password&client_id=" + this.clientid + "&client_secret=" + this.secret + "&username=" + this.user + "&password=" + this.password;
-        String response = ITLClientUtilities.makeHTTPPostRequest(NetatmoWSInterface.urlbase + path, hargs, params).getContent();
-        Map<?, ?> auth = ITLClientUtilities.parseJSONResponseToMap(response);
-
-        if (auth.get("access_token") != null) {
-            this.authtoken = (String) auth.get("access_token");
-            this.refreshtoken = (String) auth.get("refresh_token");
-
+        if (response.success()) {
+            JsonObject result = response.deserialise();
+            authtoken = result.getAsJsonPrimitive("access_token").getAsString();
+            refreshtoken = result.getAsJsonPrimitive("refresh_token").getAsString();
             return true;
         }
-
-        return false;
+        else {
+            return false;
+        }
     }
 
-    public List<String> getDevices() {
-        String[][] hargs = {{"Content-Type", " application/x-www-form-urlencoded;charset=UTF-8"}, {"Accept", "application/json"}};
-        String path = "/api/devicelist";
-        String params = "?access_token=";
-        List<String> lst = new ArrayList<String>();
+    public List<String> getDevices() throws ApiException {
+        ApiClient client = new ApiClient(urlbase + "/api/devicelist");
+        client.data("access_token", authtoken);
 
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params + this.authtoken, hargs);
+        ApiResponse response = client.get();
 
-        if (response.getResponseCode() > 400) {
-            return lst;
+        if (response.success()) {
+            DeviceList deviceList = response.deserialise("body", DeviceList.class);
+            List<String> list = new ArrayList<>();
+
+            for (NetatmoDevice device : deviceList.getDevices()) {
+                list.add(device.getStationName());
+                station2device.put(device.getStationName(), device.getID());
+            }
+
+            for (NetatmoModule module : deviceList.getModules()) {
+                device2module.put(module.getMainDevice(), module.getID());
+            }
+
+            return list;
         }
-
-        LinkedList<?> modules = (LinkedList<?>) ((Map<?, ?>) ITLClientUtilities.parseJSONResponseToMap(response.getContent()).get("body")).get("modules");
-        LinkedList<?> devices = (LinkedList<?>) ((Map<?, ?>) ITLClientUtilities.parseJSONResponseToMap(response.getContent()).get("body")).get("devices");
-
-        for (Iterator<?> e = devices.iterator(); e.hasNext();) {
-            Map<?, ?> device = (Map<?, ?>) e.next();
-
-            lst.add((String) device.get("station_name"));
-
-            this.station2device.put((String) device.get("station_name"), (String) device.get("_id"));
+        else {
+            throw new ApiException("Could not get device list.");
         }
-
-        for (Iterator<?> e = modules.iterator(); e.hasNext();) {
-            Map<?, ?> module = (Map<?, ?>) e.next();
-
-            this.device2module.put((String) module.get("main_device"), (String) module.get("_id"));
-        }
-
-        return lst;
     }
 
     public String getIDForDevice(String station) {
@@ -131,83 +120,73 @@ public class NetatmoWSInterface {
      * Get a specified measurement from a specified device between 2 specified
      * dates at 30 minute intervals.
      */
-    public List<Measurement> getIndoorTemperatureMeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getIndoorTemperatureMeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.INDOOR_TEMPERATURE_MEASUREMENT, true, null, device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getOutdoorTemperatureMeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getOutdoorTemperatureMeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.OUTDOOR_TEMPERATURE_MEASUREMENT, false, this.getModuleIDForDeviceID(device), device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getIndoorHumidityMeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getIndoorHumidityMeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.INDOOR_HUMIDITY_MEASUREMENT, true, null, device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getOutdoorHumidityMeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getOutdoorHumidityMeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.OUTDOOR_HUMIDITY_MEASUREMENT, false, this.getModuleIDForDeviceID(device), device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getIndoorNoiseMeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getIndoorNoiseMeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.NOISE_MEASUREMENT, true, null, device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getIndoorCO2MeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getIndoorCO2MeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.CO2_MEASUREMENT, true, null, device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getIndoorPressureMeasurementForDevice(String device, String dateStart, String dateEnd) {
+    public List<Measurement> getIndoorPressureMeasurementForDevice(String device, String dateStart, String dateEnd) throws ApiException {
         return this.getMeasurementForDevice(NetatmoWSInterface.PRESSURE_MEASUREMENT, true, null, device, dateStart, dateEnd);
     }
 
-    public List<Measurement> getMeasurementForDevice(String type, boolean indoor, String module, String device, String dateStart, String dateEnd) {
-        List<Measurement> measures = new ArrayList<Measurement>();
-        String[][] hargs = {{"Content-Type", " application/x-www-form-urlencoded;charset=UTF-8"}, {"Accept", "application/json"}};
+    public List<Measurement> getMeasurementForDevice(String type, boolean indoor, String module, String device, String dateStart, String dateEnd) throws ApiException {
+        ApiClient client = new ApiClient("/api/getmeasure");
 
-        String path = "/api/getmeasure";
-        String params = "?access_token=" + this.authtoken;
-
-        params += "&device_id=" + device;
-
+        try {
+            client.data("date_begin", Long.toString(ITLClientUtilities.dateStringToSeconds(dateStart)));
+            client.data("date_end", Long.toString(ITLClientUtilities.dateStringToSeconds(dateEnd)));
+        }
+        catch (ParseException ex) {
+            throw new IllegalArgumentException("dateStart or dateEnd is an invalid date", ex);
+        }
+        
+        client.data("access_token", authtoken);
+        client.data("device_id", device);
+        client.data("type", type);
+        client.data("scale", "30min");
+        
         if (!indoor) {
-            params += "&module_id=" + module;
+            client.data("module_id", module);
         }
 
-        params += "&type=" + type;
-        params += "&scale=" + "30min";
-        params += "&date_begin=" + ITLClientUtilities.timeToUTC(dateStart) / 1000L;
-        params += "&date_end=" + ITLClientUtilities.timeToUTC(dateEnd) / 1000L;
+        ApiResponse response = client.get();
 
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(NetatmoWSInterface.urlbase + path + params, hargs);
+        if (response.success()) {
+            NetatmoMeasurement[] netatmoMeasurements = response.deserialise("body", NetatmoMeasurement[].class);
+            List<Measurement> measurements = new ArrayList<>();
 
-        if (response.getResponseCode() > 400) {
-            return null;
-        }
-
-        LinkedList<?> meas = (LinkedList<?>) ITLClientUtilities.parseJSONResponseToMap(response.getContent()).get("body");
-
-        for (Iterator<?> e = meas.iterator(); e.hasNext();) {
-            Map<?, ?> obs = (Map<?, ?>) e.next();
-            long beg_time = ((Long) obs.get("beg_time")).longValue() * 1000L;
-            long step_time = ((Long) obs.get("step_time")).longValue() * 1000L;
-            LinkedList<?> values = (LinkedList<?>) obs.get("value");
-            int i = 0;
-
-            for (Iterator<?> e2 = values.iterator(); e2.hasNext();) {
-                LinkedList<?> tuple = (LinkedList<?>) e2.next();
-                Measurement measure = new Measurement();
-
-                measure.setObservationTime(ITLClientUtilities.utcToTime(beg_time + step_time * (i++)));
-                measure.setObservation(Float.parseFloat(tuple.get(0).toString()));
-
-                measures.add(measure);
+            for (NetatmoMeasurement measurement : netatmoMeasurements) {
+                measurements.addAll(measurement.getMeasurements());
             }
-        }
 
-        return measures;
+            return measurements;
+        }
+        else {
+            throw new ApiException("Could not get measurement.");
+        }
     }
 
     public static List<DeployedSensor> getSensorsForPlatform() {
-        List<DeployedSensor> allsense = new ArrayList<DeployedSensor>();
+        List<DeployedSensor> allsense = new ArrayList<>();
         DeployedSensor itemp = new DeployedSensor();
         DeployedSensor otemp = new DeployedSensor();
         DeployedSensor ihum = new DeployedSensor();

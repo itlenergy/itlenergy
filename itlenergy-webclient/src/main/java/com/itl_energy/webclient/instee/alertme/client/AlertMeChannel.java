@@ -5,6 +5,8 @@
  */
 package com.itl_energy.webclient.instee.alertme.client;
 
+import com.itl_energy.webclient.instee.itl.client.model.Measurement;
+import com.itl_energy.webclient.instee.itl.client.util.ITLClientUtilities;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +41,10 @@ public class AlertMeChannel {
             max = (List<Double>) values.get("max");
         
         return max;
+    }
+    
+    public List<Measurement> getMaxMeasurements() {
+        return getMeasurements(getMax());
     }
 
     public List<Double> getMin() {
@@ -93,5 +99,19 @@ public class AlertMeChannel {
         }
         
         return halfhourly;
+    }
+    
+    
+    private List<Measurement> getMeasurements(List<Double> values) {
+        List<Measurement> measurements = new ArrayList<>(values.size());
+        long time = start * 1000;
+        long step = interval * 1000;
+        
+        for (Double value : values) {
+            measurements.add(new Measurement(ITLClientUtilities.millisecondsToDateString(time), value));
+            time += step;
+        }
+        
+        return measurements;
     }
 }

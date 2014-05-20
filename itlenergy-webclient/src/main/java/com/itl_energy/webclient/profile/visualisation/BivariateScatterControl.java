@@ -1,5 +1,6 @@
 package com.itl_energy.webclient.profile.visualisation;
 
+import com.itl_energy.webclient.instee.itl.client.util.ITLClientUtilities;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -21,8 +22,6 @@ import java.util.Set;
 import java.util.Vector;
 
 import javax.swing.JComponent;
-
-import com.itl_energy.webclient.profile.util.DateManipulator;
 
 /**
  * Class for representing 2 dimensional data in a basic scatter plot with option
@@ -236,7 +235,6 @@ public class BivariateScatterControl extends JComponent {
         protected String[] yCategories;
         protected String xlab;
         protected String ylab;
-        protected DateManipulator form;
         private boolean datesInTimeSeries;
 
         public Basic2DGrid() {
@@ -246,9 +244,7 @@ public class BivariateScatterControl extends JComponent {
 
             this.selection = -1;
 
-            this.form = new DateManipulator();
             this.datesInTimeSeries = false;
-            this.form.setOutputDateFormat("yyyy-MM-dd HH:mm");
             this.units = "";
 
             this.drawXaxis = true;
@@ -478,7 +474,7 @@ public class BivariateScatterControl extends JComponent {
                     String lab;
 
                     if (this.datesInTimeSeries) {
-                        lab = this.form.utcToTime((new Double(this.minx + i * (this.maxx - this.minx) / this.gridxinc)).longValue());
+                        lab = ITLClientUtilities.millisecondsToDateString((new Double(this.minx + i * (this.maxx - this.minx) / this.gridxinc)).longValue());
                     }
                     else {
                         lab = numf.format(this.minx + i * (this.maxx - this.minx) / this.gridxinc);

@@ -8,17 +8,15 @@ package com.itl_energy.webclient.instee.itl.ui;
  *
  * @author X60
  */
-public class DataSelectionDialog extends javax.swing.JDialog
-	{
-	
+public class DataSelectionDialog extends javax.swing.JDialog {
+
     /**
      * Creates new form DataSelectionDialog
      */
-    public DataSelectionDialog()
-    	{
+    public DataSelectionDialog() {
         initComponents();
-    	}
-    
+    }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -36,7 +34,6 @@ public class DataSelectionDialog extends javax.swing.JDialog
         jTable1 = new javax.swing.JTable();
 
         //setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-
         jButton1.setText("OK");
         jPanel2.add(jButton1);
 
@@ -49,17 +46,16 @@ public class DataSelectionDialog extends javax.swing.JDialog
         jPanel1.setLayout(new java.awt.BorderLayout());
 
         //TODO: modify to allow selection of data (by column)
-        
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
-            new Object [][] {
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null},
-                {null, null, null, null}
-            },
-            new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4"
-            }
+                new Object[][]{
+                    {null, null, null, null},
+                    {null, null, null, null},
+                    {null, null, null, null},
+                    {null, null, null, null}
+                },
+                new String[]{
+                    "Title 1", "Title 2", "Title 3", "Title 4"
+                }
         ));
         jScrollPane1.setViewportView(jTable1);
 
@@ -86,13 +82,17 @@ public class DataSelectionDialog extends javax.swing.JDialog
                     break;
                 }
             }
-        } catch (ClassNotFoundException ex) {
+        }
+        catch (ClassNotFoundException ex) {
             java.util.logging.Logger.getLogger(DataSelectionDialog.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
+        }
+        catch (InstantiationException ex) {
             java.util.logging.Logger.getLogger(DataSelectionDialog.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
+        }
+        catch (IllegalAccessException ex) {
             java.util.logging.Logger.getLogger(DataSelectionDialog.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
+        }
+        catch (javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(DataSelectionDialog.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
         //</editor-fold>

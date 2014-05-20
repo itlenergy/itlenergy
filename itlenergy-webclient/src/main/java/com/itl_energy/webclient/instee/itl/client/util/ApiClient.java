@@ -5,8 +5,10 @@
  */
 package com.itl_energy.webclient.instee.itl.client.util;
 
+import com.google.gson.Gson;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
@@ -77,10 +79,10 @@ public class ApiClient {
      * Performs an HTTP GET request.
      *
      * @return
-     * @throws IOException
+     * @throws ApiException
      */
-    public ApiResponse get() throws IOException {
-        return getResponse("GET");
+    public ApiResponse get() throws ApiException {
+        return getResponse("GET", null, null);
     }
 
     /**
@@ -88,56 +90,114 @@ public class ApiClient {
      * the request body.
      *
      * @return
-     * @throws IOException
+     * @throws ApiException
      */
-    public ApiResponse post() throws IOException {
-        return getResponse("POST");
+    public ApiResponse post() throws ApiException {
+        return post(null);
     }
-
-    private ApiResponse getResponse(String method) throws IOException {
-        String data = serialiseData();
-        URL url;
-
-        //create the URL: if it's a GET request it should include the query params
-        if (!data.isEmpty() && method.equals("GET")) {
-            url = new URL(this.url + "?" + data);
-        }
-        else {
-            url = new URL(this.url);
-        }
-
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        
-        //write the headers
-        for (Map.Entry<String, String> header: headers.entrySet()) {
-            connection.setRequestProperty(header.getKey(), header.getValue());
-        }
-        
-        connection.setRequestMethod(method);
-        connection.setUseCaches(false);
-        connection.setDoInput(true);
-        connection.setDoOutput(true);
-        
-        //if it's not a GET request, the data needs to be written to the request
-        if (!data.isEmpty() && !method.equals("GET")) {
-            byte[] bytes = data.getBytes();
-            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            connection.setRequestProperty("Content-Length", "" + Integer.toString(bytes.length));
-            connection.setRequestProperty("Content-Language", "en-US");
-
-            try (DataOutputStream wr = new DataOutputStream(connection.getOutputStream())) {
-                wr.write(bytes);
-                wr.flush();
-            }
-        }
-
-        // give it 2 minutes to respond
-        connection.setReadTimeout(120 * 1000);
-
-        return new ApiResponse(connection);
-    }
-
     
+    /**
+     * Performs an HTTP POST request. Any data passed to the data method is put
+     * in the query string and the supplied requestObject is serialised to JSON
+     * and sent in the request body.
+     *
+     * @param requestObject
+     * @return
+     * @throws ApiException
+     */
+    public ApiResponse post(Object requestObject) throws ApiException {
+        return post(requestObject, null);
+    }
+
+    /**
+     * Performs an HTTP POST request. Any data passed to the data method is put
+     * in the query string and the supplied requestObject is serialised to JSON
+     * and sent in the request body.
+     *
+     * @param requestObject
+     * @param type
+     * @return
+     * @throws ApiException
+     */
+    public ApiResponse post(Object requestObject, Type type) throws ApiException {
+        return getResponse("POST", requestObject, type);
+    }
+    
+    
+    public ApiResponse put(Object requestObject) throws ApiException {
+        return getResponse("PUT", requestObject, null);
+    }
+
+
+    private ApiResponse getResponse(String method, Object requestObject, Type type) throws ApiException {
+        try {
+            URL url;
+
+            //create the URL: if it's a GET request it should include the query params
+            if (parameters.size() > 0 && (method.equals("GET") || requestObject != null)) {
+                url = new URL(this.url + "?" + serialiseData());
+            }
+            else {
+                url = new URL(this.url);
+            }
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+            //write the headers
+            for (Map.Entry<String, String> header : headers.entrySet()) {
+                connection.setRequestProperty(header.getKey(), header.getValue());
+            }
+
+            connection.setRequestMethod(method);
+            connection.setUseCaches(false);
+            connection.setDoInput(true);
+            connection.setDoOutput(true);
+            connection.setRequestProperty("Accept", "application/json");
+
+            //if it's not a GET request, the data needs to be written to the request
+            if (!method.equals("GET")) {
+                byte[] bytes = null;
+
+                //do we need to send a JSON or a urlencoded request?
+                if (requestObject != null) {
+                    Gson gson = new Gson();
+                    String json;
+                    
+                    if (type == null)
+                        json = gson.toJson(requestObject);
+                    else
+                        json = gson.toJson(requestObject, type);
+                    
+                    bytes = json.getBytes();
+                    connection.setRequestProperty("Content-Type", "application/json");
+                }
+                else if (parameters.size() > 0) {
+                    bytes = serialiseData().getBytes();
+                    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+                    connection.setRequestProperty("Content-Language", "en-US");
+                }
+
+                //if we have a request body now, send it
+                if (bytes != null) {
+                    connection.setRequestProperty("Content-Length", Integer.toString(bytes.length));
+
+                    try (DataOutputStream wr = new DataOutputStream(connection.getOutputStream())) {
+                        wr.write(bytes);
+                        wr.flush();
+                    }
+                }
+            }
+
+            // give it 2 minutes to respond
+            connection.setReadTimeout(120 * 1000);
+
+            return new ApiResponse(connection);
+        }
+        catch (IOException ex) {
+            throw new ApiException(ex);
+        }
+    }
+
     private String serialiseData() {
         StringBuilder sb = new StringBuilder();
 

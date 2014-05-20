@@ -1,30 +1,24 @@
 package com.itl_energy.webclient.instee.itl.client;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
 import java.util.List;
 import java.util.Map;
 
 import com.itl_energy.webclient.instee.itl.client.model.DeployedSensor;
 import com.itl_energy.webclient.instee.itl.client.model.DeploymentSite;
 import com.itl_energy.webclient.instee.itl.client.model.Hub;
-import com.itl_energy.webclient.instee.itl.client.model.Log;
+import com.itl_energy.webclient.instee.itl.client.model.Items;
 import com.itl_energy.webclient.instee.itl.client.model.Measurement;
 import com.itl_energy.webclient.instee.itl.client.model.MeteredPremises;
 import com.itl_energy.webclient.instee.itl.client.model.Sensor;
-import com.itl_energy.webclient.instee.itl.client.model.Status;
 import com.itl_energy.webclient.instee.itl.client.model.Weather;
-import com.itl_energy.webclient.instee.itl.client.resource.DeployedSensorSerialized;
-import com.itl_energy.webclient.instee.itl.client.resource.DeploymentSiteSerialized;
-import com.itl_energy.webclient.instee.itl.client.resource.HubSerialized;
-import com.itl_energy.webclient.instee.itl.client.resource.MeasurementSerialized;
-import com.itl_energy.webclient.instee.itl.client.resource.MeteredPremisesSerialized;
-import com.itl_energy.webclient.instee.itl.client.resource.SensorSerialized;
-import com.itl_energy.webclient.instee.itl.client.resource.WeatherSerialized;
-import com.itl_energy.webclient.instee.itl.client.util.ITLClientUtilities;
-import com.itl_energy.webclient.instee.itl.client.util.ITLHTTPResponse;
+import com.itl_energy.webclient.instee.itl.client.util.ApiClient;
+import com.itl_energy.webclient.instee.itl.client.util.ApiException;
+import com.itl_energy.webclient.instee.itl.client.util.ApiResponse;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Type;
+import java.net.URLEncoder;
 
 /**
  * Client interface to the ITL Metering Web Service.
@@ -45,545 +39,182 @@ public class ITLWSInterface {
     protected List<DeployedSensor> deployedSensors;
 
     public ITLWSInterface(String urlbase) {
-        //this.urlbase="http://localhost:8282/apatsche-web";
+        //this.urlbase="http://localhost:8282/apatsche-web/api";
         this.urlbase = urlbase;
         this.token = null;
         this.sessionExpiry = null;
     }
 
-    public boolean beginSession(String user, String password) {
-        String path = "/api/auth/login";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
+    public boolean beginSession(String user, String password) throws ApiException {
+        ApiClient client = new ApiClient(urlbase + "/auth/login");
 
-        String content = "{\"username\":\"" + user + "\",\"password\":\"" + password + "\"}";
-        String response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path, args, content).getContent();
-        Map<?, ?> session = ITLClientUtilities.parseJSONResponseToMap(response);
+        JsonObject login = new JsonObject();
+        login.addProperty("username", user);
+        login.addProperty("password", password);
 
-        if (session != null) {
-            this.token = (String) session.get("ticket");
-            this.sessionExpiry = (String) session.get("expires");
+        ApiResponse response = client.post(login);
 
+        if (response.success()) {
+            JsonObject result = response.deserialise();
+            token = result.getAsJsonPrimitive("ticket").getAsString();
+            sessionExpiry = result.getAsJsonPrimitive("expires").getAsString();
             return true;
         }
-
-        return false;
+        else {
+            return false;
+        }
     }
 
-    public List<DeploymentSite> getDeploymentSites() {
-        List<DeploymentSite> deploys = new ArrayList<DeploymentSite>();
-
-        String path = "/api/sites";
-        String params = "?sgauth=" + this.token;
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> siteList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) siteList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            DeploymentSite ds = DeploymentSiteSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            deploys.add(ds);
-        }
-
-        return deploys;
+    public List<DeploymentSite> getDeploymentSites() throws ApiException {
+        Type type = new TypeToken<Items<DeploymentSite>>() {}.getType();
+        return this.<Items<DeploymentSite>>getResult(type, "/sites").getItems();
     }
 
-    public int addDeploymentSite(DeploymentSite d) {
-        String path = "/api/sites";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        DeploymentSiteSerialized dss = new DeploymentSiteSerialized(d);
-        String content = dss.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+    public int addDeploymentSite(DeploymentSite d) throws ApiException {
+        return addObject(d, null, "/sites");
     }
 
-    public List<Weather> getWeatherForDeploymentSite(DeploymentSite d, String start, String finish) {
-        List<Weather> weather = new ArrayList<Weather>();
-        String begin = start.replace(" ", "%20").replace(":", "%3A");
-        String end = finish.replace(" ", "%20").replace(":", "%3A");
-
-        String path = "/api/weather/" + begin + "/" + end + "/";
-        String params = "?sgauth=" + this.token;
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> weatherList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) weatherList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Weather w = WeatherSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            weather.add(w);
+    public List<Weather> getWeatherForDeploymentSite(DeploymentSite d, String start, String finish) throws ApiException {
+        try {
+            start = URLEncoder.encode(start, "UTF-8");
+            finish = URLEncoder.encode(finish, "UTF-8");
+        }
+        catch (UnsupportedEncodingException ex) {
+            throw new ApiException(ex);
         }
 
-        return weather;
+        Type type = new TypeToken<Items<Weather>>() {}.getType();
+        return this.<Items<Weather>>getResult(type, "/weather/%s/%s/", start, finish).getItems();
     }
 
-    public List<Weather> getWeatherForDeploymentSite(DeploymentSite d, String start) {
-        List<Weather> weather = new ArrayList<Weather>();
-
-        String path = "/api/weather";
-        String params = "?sgauth=" + this.token;
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> weatherList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) weatherList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Weather w = WeatherSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            weather.add(w);
-        }
-
-        return weather;
+    public List<Weather> getWeatherForDeploymentSite(DeploymentSite d) throws ApiException {
+        Type type = new TypeToken<Items<Weather>>() {}.getType();
+        return this.<Items<Weather>>getResult(type, "/weather").getItems();
     }
 
-    public int insertWeatherForDeploymentSite(DeploymentSite d, List<Weather> weather) {
-        String path = "/api/sites/" + d.getSiteid() + "/weather";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        String content = "{ \"items\": [";
-
-        for (int i = 0; i < weather.size(); i++) {
-            WeatherSerialized ws = new WeatherSerialized(weather.get(i));
-
-            content += ws.toJSON();
-
-            if (i < weather.size() - 1) {
-                content += ",";
-            }
-        }
-
-        content += "]}";
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+    public void insertWeatherForDeploymentSite(DeploymentSite d, List<Weather> weather) throws ApiException {
+        Type type = new TypeToken<Items<Weather>>() {}.getType();
+        Items<Weather> items = new Items<>(weather);
+        
+        ApiResponse response = getClient("/sites/%d/weather", d.getSiteid()).post(items, type);
+        
+        if (!response.success())
+            throw new ApiException("Could not add weather.");
     }
 
-    public int insertWeatherForDeploymentSite(DeploymentSite d, Weather weather) {
-        String path = "/api/sites/" + d.getSiteid() + "/weather";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        WeatherSerialized ws = new WeatherSerialized(weather);
-        String content = ws.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+    public int insertWeatherForDeploymentSite(DeploymentSite d, Weather weather) throws ApiException {
+        return addObject(weather, null, "/sites/%d/weather", d.getSiteid());
     }
 
-    public List<MeteredPremises> getMeteredPremisesForSite(DeploymentSite d) {
-        String path = "/api/sites/" + d.getSiteid() + "/houses";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<MeteredPremises> houses = new ArrayList<MeteredPremises>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> houseList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) houseList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            MeteredPremises m = MeteredPremisesSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            houses.add(m);
-        }
-
-        return houses;
+    public List<MeteredPremises> getMeteredPremisesForSite(DeploymentSite d) throws ApiException {
+        Type type = new TypeToken<Items<MeteredPremises>>() {}.getType();
+        return this.<Items<MeteredPremises>>getResult(type, "/sites/%d/houses", d.getSiteid()).getItems();
     }
 
-    /**
-     * Adds a metered premises to a given deployment site.
-     *
-     * @param d the deployment site to add the property to
-     * @param m the property to add
-     * @return the id of the newly added property
-     */
-    public int addMeteredPremisesToSite(DeploymentSite d, MeteredPremises m) {
-        String path = "/api/houses";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
+    public int addMeteredPremisesToSite(DeploymentSite d, MeteredPremises m) throws ApiException {
         m.setSiteId(d.getSiteid());
-
-        MeteredPremisesSerialized mps = new MeteredPremisesSerialized(m);
-        String content = mps.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+        return addObject(m, null, "/houses");
     }
 
-    public List<DeployedSensor> getDeployedSensorsForSite(DeploymentSite d) {
-        String path = "/api/deployedsensors";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<DeployedSensor> dsense = new ArrayList<DeployedSensor>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> sensorList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) sensorList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            DeployedSensor ds = DeployedSensorSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            dsense.add(ds);
-        }
-
-        return dsense;
+    public List<DeployedSensor> getDeployedSensorsForSite(DeploymentSite d) throws ApiException {
+        Type type = new TypeToken<Items<DeployedSensor>>() {}.getType();
+        return this.<Items<DeployedSensor>>getResult(type, "/deployedsensors").getItems();
     }
 
-    public int addDeployedSensor(DeployedSensor ds) {
-        String path = "/api/deployedsensors";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        DeployedSensorSerialized dss = new DeployedSensorSerialized(ds);
-        String content = dss.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+    public int addDeployedSensor(DeployedSensor ds) throws ApiException {
+        return addObject(ds, null, "/deployedsensors");
     }
 
-    public List<Hub> getHubsForMeteredPremises(MeteredPremises m) {
-        String path = "/api/houses/" + m.getHouseId() + "/hubs";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<Hub> hlist = new ArrayList<Hub>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> hubList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) hubList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Hub h = HubSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            //filter by m here?
-            hlist.add(h);
-        }
-
-        return hlist;
+    public List<Hub> getHubsForMeteredPremises(MeteredPremises m) throws ApiException {
+        Type type = new TypeToken<Items<Hub>>() {}.getType();
+        return this.<Items<Hub>>getResult(type, "/houses/%d/hubs", m.getHouseId()).getItems();
     }
 
-    public int addHubToMeteredPremises(MeteredPremises house, Hub hub) {
-        String path = "/api/hubs";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
+    public int addHubToMeteredPremises(MeteredPremises house, Hub hub) throws ApiException {
         hub.setHouseId(house.getHouseId());
-
-        HubSerialized hs = new HubSerialized(hub);
-        String content = hs.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+        return addObject(hub, null, "/hubs");
     }
 
-    public boolean updateHub(Hub h) {
-        String path = "/api/hubs";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        HubSerialized hs = new HubSerialized(h);
-        String content = hs.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPutRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            return true;
-        }
-
-        return false;
+    public void updateHub(Hub hub) throws ApiException {
+        ApiResponse response = getClient("/hubs").put(hub);
+        
+        if (!response.success())
+            throw new ApiException("Could not update hub.");
     }
 
-    public List<Log> getLogsForHub(Hub h, String start, String finish) {
-        //this should not be here...
-
-        return null;
+    public List<Sensor> getSensorsForHub(int hid) throws ApiException {
+        Type type = new TypeToken<Items<Sensor>>() {}.getType();
+        return this.<Items<Sensor>>getResult(type, "/hubs/%d/sensors", hid).getItems();
     }
-
-    public List<Log> getLogsForHub(Hub h, String start) {
-        return null;
-    }
-
-    public List<Log> getLogsForHub(Hub h) {
-        return null;
-    }
-
-    public boolean addLogToHub(Hub h, Log l) {
-        return false;
-    }
-
-    public List<Sensor> getSensorsForHub(Hub h) {
-        return this.getSensorsForHub(h.getHubId());
-    }
-
-    public List<Sensor> getSensorsForHub(int hid) {
-        String path = "/api/hubs/" + hid + "/sensors";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<Sensor> slist = new ArrayList<Sensor>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> senseList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) senseList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Sensor s = SensorSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            //filter by h here?
-            slist.add(s);
-        }
-
-        return slist;
-    }
-
-    public int addSensorToHub(Sensor s, Hub hub) {
-        String path = "/api/sensors";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
+    
+    public int addSensorToHub(Sensor s, Hub hub) throws ApiException {
         s.setHubId(hub.getHubId());
-
-        SensorSerialized ss = new SensorSerialized(s);
-        String content = ss.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+        return addObject(s, null, "/sensors");
     }
 
-    public List<Measurement> getMeasurementsForSensor(Sensor s, String start, String finish) {
+    public List<Measurement> getMeasurementsForSensor(Sensor s, String start, String finish) throws ApiException {
         return this.getMeasurementsForSensor(s.getSensorId(), start, finish);
     }
 
-    public List<Measurement> getMeasurementsForSensor(int s, String start, String finish) {
-        String begin = start.replace(" ", "%20").replace(":", "%3A");
-        String end = finish.replace(" ", "%20").replace(":", "%3A");
-
-        String path = "/api/sensors/" + s + "/measurements/" + begin + "/" + end + "/";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<Measurement> mlist = new ArrayList<Measurement>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-
-        if (response == null) {
-            return mlist;
+    public List<Measurement> getMeasurementsForSensor(int s, String start, String finish) throws ApiException {
+        try {
+            start = URLEncoder.encode(start, "UTF-8");
+            finish = URLEncoder.encode(finish, "UTF-8");
         }
-
-        Map<?, ?> measList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) measList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Measurement m = MeasurementSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            //filter by h here?
-            mlist.add(m);
+        catch (UnsupportedEncodingException ex) {
+            throw new ApiException(ex);
         }
-
-        return mlist;
+        
+        Type type = new TypeToken<Items<Measurement>>() {}.getType();
+        return getResult(type, "/sensors/%d/measurements/%s/%s/", s, start, finish);
     }
 
-    public List<Measurement> getMeasurementsForSensor(Sensor s, String start) {
-        String path = "/api/measurements";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<Measurement> mlist = new ArrayList<Measurement>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> measList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) measList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Measurement m = MeasurementSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            //filter by h here?
-            mlist.add(m);
-        }
-
-        return mlist;
-    }
-
-    public List<Measurement> getMeasurementsForSensor(Sensor s) {
-        String path = "/api/measurements";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
-        List<Measurement> mlist = new ArrayList<Measurement>();
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPGetRequest(urlbase + path + params, args);
-        Map<?, ?> measList = ITLClientUtilities.parseJSONResponseToMap(response.getContent());
-        LinkedList<?> list = (LinkedList<?>) measList.get("items");
-
-        for (Iterator<?> it = list.iterator(); it.hasNext();) {
-            Object object = it.next();
-            Measurement m = MeasurementSerialized.fromJSON((LinkedHashMap<?, ?>) object);
-
-            //filter by h here?
-            mlist.add(m);
-        }
-
-        return mlist;
-    }
-
-    public int addMeasurementForSensor(Sensor s, Measurement m) {
-        String path = "/api/measurements";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-
+    public int addMeasurementForSensor(Sensor s, Measurement m) throws ApiException {
         m.setSensorId(s.getSensorId());
-
-        MeasurementSerialized ms = new MeasurementSerialized(m);
-        String content = ms.toJSON();
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPostRequest(this.urlbase + path + params, args, content);
-
-        if (response.getResponseCode() >= 200) {
-            String loc = response.getHeaders().get("Location").get(0);
-
-            if (loc != null) {
-                return Integer.parseInt(loc.substring(loc.lastIndexOf('/') + 1));
-            }
-
-            return -1;
-        }
-
-        return -1;
+        return addObject(m, null, "/measurements");
     }
 
-    public int addMeasurementsForSensor(Sensor s, List<Measurement> m) {
-        return this.addMeasurementsForSensor(s.getSensorId(), m);
+    public void addMeasurementsForSensor(Sensor s, List<Measurement> m) throws ApiException {
+        this.addMeasurementsForSensor(s.getSensorId(), m);
     }
 
-    public int addMeasurementsForSensor(int sid, List<Measurement> m) {
-        String path = "/api/sensors/" + sid + "/measurements";
-        String[][] args = {{"Content-Type", "application/json"}, {"Accept", "application/json"}};
-        String params = "?sgauth=" + this.token;
-        String content = "{ \"items\": [";
+    public void addMeasurementsForSensor(int sid, List<Measurement> m) throws ApiException {
+        Type type = new TypeToken<Items<Measurement>>() {}.getType();
+        Items<Measurement> items = new Items<>(m);
+        
+        ApiResponse response = getClient("/sensors/%d/measurements", sid).post(items, type);
+        
+        if (!response.success())
+            throw new ApiException("Could not add measurements.");
+    }
+    
+    
+    private int addObject(Object object, Type type, String url, Object... params) throws ApiException {
+        ApiResponse response = getClient(url, params).post(object, type);
 
-        for (int i = 0; i < m.size(); i++) {
-            m.get(i).setSensorId(sid);
+        if (response.success()) {
+            String location = response.getHeaderField("Location");
 
-            MeasurementSerialized ms = new MeasurementSerialized(m.get(i));
-
-            content += ms.toJSON();
-
-            if (i < m.size() - 1) {
-                content += ",";
+            if (location != null) {
+                return Integer.parseInt(location.substring(location.lastIndexOf("/") + 1));
             }
         }
 
-        content += "]}";
-
-        ITLHTTPResponse response = ITLClientUtilities.makeHTTPPutRequest(this.urlbase + path + params, args, content);
-
-        if (response != null) {
-            if (response.getResponseCode() == 200) {
-                /*String loc=response.getHeaders().get("Location").get(0);
-				
-                 if(loc!=null)
-                 return Integer.parseInt(loc.substring(loc.lastIndexOf('/')+1));*/
-
-                return 0;
-            }
-        }
-
-        return -1;
+        throw new ApiException("Could not add object.");
     }
-
-    public List<Status> getStatusMessages() {
-        return null;
+    
+    
+    private <T> T getResult(Type type, String url, Object... params) throws ApiException {
+        ApiResponse response = getClient(url, params).get();
+        return response.deserialise(type);
     }
+    
+    
+    private ApiClient getClient(String url, Object... params) {
+        ApiClient client = new ApiClient(urlbase + url, params);
+        client.data("sgauth", token);
+        
+        return client;
 
-    public boolean addStatusMessage(Status s) {
-        return false;
     }
 }
