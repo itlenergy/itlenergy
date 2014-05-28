@@ -6,3 +6,6 @@ server.log
 .settings/
 .classpath
 .project
+/itlenergy-android/gen/
+/itlenergy-android/bin/
+/itlenergy-android/nbandroid/

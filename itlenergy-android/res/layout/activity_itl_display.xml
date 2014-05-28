@@ -1,0 +1,41 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/black_overlay"
+    android:screenOrientation="landscape"
+    tools:context=".ITLDisplayActivity" >
+
+    <!--
+         The primary full-screen view. This can be replaced with whatever view
+         is needed to present your content, e.g. VideoView, SurfaceView,
+         TextureView, etc.
+    -->
+
+    <!--
+         This FrameLayout insets its children based on system windows using
+         android:fitsSystemWindows.
+    -->
+
+ 	<ListView
+ 	    android:id="@+id/sensorview"
+ 	    android:layout_width="262dp"
+ 	    android:layout_height="fill_parent" >
+	
+    </ListView>
+	<LinearLayout
+	    android:layout_width="wrap_content"
+	    android:layout_height="match_parent"
+	    android:orientation="vertical" >
+	    <org.itl.display.ITLSensorDataView
+	        android:id="@+id/measurementview"
+	        android:layout_width="match_parent"
+	        android:layout_height="440dp" />
+
+	    <SeekBar
+	        android:id="@+id/timeline"
+	        android:layout_width="fill_parent"
+	        android:layout_height="wrap_content" />
+
+	</LinearLayout>
+</LinearLayout>
