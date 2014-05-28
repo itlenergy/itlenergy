@@ -1,6 +1,6 @@
 package com.itl_energy.webclient.profile.visualisation;
 
-import com.itl_energy.webclient.instee.itl.client.util.ITLClientUtilities;
+import com.itl_energy.webclient.itl.client.util.ITLClientUtilities;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
