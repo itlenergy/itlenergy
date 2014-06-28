@@ -1,0 +1,36 @@
+<div class="body-shim">
+  <div class="container body-container">
+    <h1>{{title}}</h1>
+    <p class="directions">You can change the name and location details of the site here.</p>
+
+    <form class="form-horizontal">
+      <div class="control-group">
+        <label class="control-label" for="fUsfNameername">Name</label>
+        <div class="controls">
+          <input type="text" id="fName" ng-model="site.siteName">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="fAltitude">Altitude</label>
+        <div class="controls">
+          <input type="text" id="fAltitude" ng-model="site.altitude">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="fLatitude">Latitude</label>
+        <div class="controls">
+          <input type="text" id="fLatitude" ng-model="site.latitude">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label" for="fLongitude">Longitude</label>
+        <div class="controls">
+          <input type="text" id="fLongitude" ng-model="site.longitude">
+        </div>
+      </div>
+    </form>
+    <button class="btn btn-primary" ng-click="save()">Save</button>
+    <button class="btn btn-warning" ng-click="del()" ng-hide="isnew">Delete</button>
+    <button class="btn" ng-click="cancel()">Cancel</button>
+  </div>
+</div>

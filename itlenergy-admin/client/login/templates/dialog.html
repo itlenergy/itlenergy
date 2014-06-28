@@ -1,0 +1,17 @@
+<div class="modal-header">
+  <h1>Login</h1>
+</div>
+<div class="modal-body">
+  <p>Please log in.</p>
+  <p style="color:red">{{errorMessage}}</p>
+  {{username}}
+
+  <label for="loginUsername">Username</label>
+  <input ng-model="form.username" id="loginUsername" type="text" />
+
+  <label for="loginPassword">Password</label>
+  <input ng-model="form.password" id="loginPassword" type="password" />
+</div>
+<div class="modal-footer">
+  <button ng-click="login()" class="btn btn-primary">Login</button>
+</div>

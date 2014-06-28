@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html lang="en" class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html lang="en" class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html lang="en" class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en" class="no-js"> <!--<![endif]-->
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>APAtSCHE &ndash; Aging Population Attitudes to Sensor Controlled Home Energy</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width">
+
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="build/bootstrap.css">
+    <link rel="stylesheet" type="text/css" href="build/client.css">
+
+    <script src="lib/modernizr.js"></script>
+    <script src="lib/angular-1.0.8.min.js"></script>
+    <script src="lib/ui-bootstrap-tpls-0.6.0.min.js"></script>
+    <script src="build/client.js"></script>
+    <script src="build/templates.js"></script>
+  </head>
+  <body ng-app="app">
+    <!--[if lte IE 8]>
+      <div class="browser-warning">You are using an <strong>outdated</strong> web browser which is not supported by this website. Please visit <a href="http://browsehappy.com/">http://browsehappy.com/</a> to upgrade for free.</div>
+    <![endif]-->
+    <div class="connection-error" ng-show="connectionError"><div class="container">Connection error!</div></div>
+    <nav class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <div class="pull-left">
+            <a class="brand" role="button" href="#/">
+              APAtSCHE
+            </a>
+          </div>
+          <ul class="nav" role="menu">
+              <li><a href="#/users">Users</a></li>
+              <li><a href="#/sites">Sites</a></li>
+            </ul>
+        </div>
+      </div>
+    </nav>
+    <main ng-view>
+    </main>
+  </body>
+</html>

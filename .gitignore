@@ -9,3 +9,5 @@ server.log
 /itlenergy-android/gen/
 /itlenergy-android/bin/
 /itlenergy-android/nbandroid/
+/itlenergy-admin/node_modules/
+*.sublime*

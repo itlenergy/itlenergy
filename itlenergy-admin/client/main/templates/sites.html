@@ -1,0 +1,10 @@
+<div class="body-shim">
+  <div class="container body-container">
+    <h1>Sites</h1>
+    <p class="directions">Add or remove deployment sites.</p>
+    <a href="#/sites/" class="btn btn-primary">Add site</a>
+    <ul class="data sites-data">
+      <li ng-repeat="site in sites"><a class="site-name" href="#/sites/{{site.siteId}}">{{site.siteName}}</a></li>
+    </ul>
+  </div>
+</div>

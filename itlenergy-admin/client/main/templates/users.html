@@ -1,0 +1,10 @@
+<div class="body-shim">
+  <div class="container body-container">
+    <h1>Users</h1>
+    <p class="directions">Manage your users and set roles and passwords.  For security, to change or add users, you must have supplied your password recently, so you may be asked again.</p>
+    <a href="#/users/" class="btn btn-primary">Add user</a>
+    <ul class="data users-data">
+      <li ng-repeat="user in users"><a class="username" href="#/users/{{user.userId}}">{{user.username}}</a><span class="role">{{user.role}}</span></li>
+    </ul>
+  </div>
+</div>

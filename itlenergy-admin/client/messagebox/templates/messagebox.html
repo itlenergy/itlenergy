@@ -1,0 +1,11 @@
+<div class="modal-header">
+  <h1 ng-bind="title"></h1>
+</div>
+<div class="modal-body">
+  <p ng-bind="text"></p>
+  <input type="{{inputType}}" ng-model="form.inputValue" ng-show="input" />
+</div>
+<div class="modal-footer">
+  <button ng-click="ok()" class="btn btn-primary">Ok</button>
+  <button ng-click="cancel()" class="btn">Cancel</button>
+</div>
