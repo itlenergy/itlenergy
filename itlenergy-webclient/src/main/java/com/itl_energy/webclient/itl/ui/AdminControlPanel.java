@@ -34,14 +34,14 @@ import javax.swing.tree.TreeCellRenderer;
 import javax.swing.tree.TreeSelectionModel;
 import javax.swing.JOptionPane;
 
-import com.itl_energy.webclient.itl.client.ITLWSInterface;
-import com.itl_energy.webclient.itl.client.model.DeployedSensor;
-import com.itl_energy.webclient.itl.client.model.DeploymentSite;
-import com.itl_energy.webclient.itl.client.model.Hub;
-import com.itl_energy.webclient.itl.client.model.Measurement;
-import com.itl_energy.webclient.itl.client.model.MeteredPremises;
-import com.itl_energy.webclient.itl.client.model.Sensor;
-import com.itl_energy.webclient.itl.client.util.ApiException;
+import com.itl_energy.webclient.itl.ITLClient;
+import com.itl_energy.webclient.itl.model.DeployedSensor;
+import com.itl_energy.webclient.itl.model.DeploymentSite;
+import com.itl_energy.webclient.itl.model.Hub;
+import com.itl_energy.webclient.itl.model.Measurement;
+import com.itl_energy.webclient.itl.model.MeteredPremises;
+import com.itl_energy.webclient.itl.model.Sensor;
+import com.itl_energy.webclient.itl.util.ApiException;
 
 /**
  * User interface for browsing and maintaining ITL metering database.
@@ -97,13 +97,13 @@ public class AdminControlPanel extends JFrame implements ActionListener, WindowL
     protected JPopupMenu deployedSensorPopup;
     protected JPopupMenu dataPopup;
 
-    protected ITLWSInterface controller;
+    protected ITLClient controller;
     protected TrialContextStore lookup;
 
     public AdminControlPanel() {
         super("ITL Domestic Metering Database");
 
-        this.controller = new ITLWSInterface("http://localhost:8282/apatsche-web");
+        this.controller = new ITLClient("http://localhost:8282/apatsche-web");
         //this.controller=new ITLWSInterface("http://itl.stugo.co.uk");
         this.lookup = TrialContextStore.load();
 
@@ -323,15 +323,13 @@ public class AdminControlPanel extends JFrame implements ActionListener, WindowL
 
                 List<DeployedSensor> depsens = this.controller.getDeployedSensorsForSite(dep.get(i));
 
-                for (int j = 0; j < depsens.size(); j++) {
-                    DefaultMutableTreeNode dsense = new DefaultMutableTreeNode(depsens.get(j).getDescription());
+                for (DeployedSensor depsen : depsens) {
+                    DefaultMutableTreeNode dsense = new DefaultMutableTreeNode(depsen.getDescription());
                     TrialSiteObject stsob = new TrialSiteObject();
-
-                    stsob.setDisplayName(depsens.get(j).getDescription());
+                    stsob.setDisplayName(depsen.getDescription());
                     stsob.setTypeID(TrialSiteObject.ID_DEPLOYED_SENSOR);
                     stsob.addToPath(dep.get(i).getSiteid());
-                    stsob.addToPath(depsens.get(j).getTypeid());
-
+                    stsob.addToPath(depsen.getTypeid());
                     dsense.setUserObject(stsob);
                     ds.add(dsense);
                 }
