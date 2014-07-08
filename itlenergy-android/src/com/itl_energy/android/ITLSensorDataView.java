@@ -1,4 +1,4 @@
-package com.itl_ernergy.android;
+package com.itl_energy.android;
 
 import android.content.Context;
 import android.util.AttributeSet;
@@ -7,8 +7,8 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Paint.Style;
-import com.itl_ernergy.android.graphics.TimeSeriesDataSet;
-import com.itl_ernergy.android.graphics.TimeSeriesGraph;
+import com.itl_energy.android.graphics.TimeSeriesDataSet;
+import com.itl_energy.android.graphics.TimeSeriesGraph;
 
 public class ITLSensorDataView extends View {
 

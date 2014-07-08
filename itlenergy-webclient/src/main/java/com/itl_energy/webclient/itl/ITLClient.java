@@ -39,12 +39,20 @@ public class ITLClient {
     protected List<DeployedSensor> deployedSensors;
 
     public ITLClient(String urlbase) {
-        //this.urlbase="http://localhost:8282/apatsche-web/api";
         this.urlbase = urlbase;
         this.token = null;
         this.sessionExpiry = null;
     }
 
+    /**
+     * Begins a new session with the API, authenticating the specified user.
+     * This method should be called first as it saves an authentication token
+     * which is used by subsequent method calls.
+     * @param user the user to authenticate with
+     * @param password the password to authenticate with
+     * @return true if the authentication succeeded; otherwise, false
+     * @throws ApiException if there was a connection error
+     */
     public boolean beginSession(String user, String password) throws ApiException {
         ApiClient client = new ApiClient(urlbase + "/auth/login");
 
@@ -65,15 +73,36 @@ public class ITLClient {
         }
     }
 
+    /**
+     * Gets the list of deployment sites.
+     * @return
+     * @throws ApiException if there was a connection error
+     */
     public List<DeploymentSite> getDeploymentSites() throws ApiException {
         Type type = new TypeToken<Items<DeploymentSite>>() {}.getType();
         return this.<Items<DeploymentSite>>getResult(type, "/sites").getItems();
     }
 
+    /**
+     * Adds a deployment site.
+     * @param d The deployment site to add.
+     * @return the ID of the added site
+     * @throws ApiException if there was a connection error or the site could 
+     * not be added
+     */
     public int addDeploymentSite(DeploymentSite d) throws ApiException {
         return addObject(d, null, "/sites");
     }
 
+    /**
+     * Gets a list of weather observations between the specified times for the 
+     * specified site.
+     * @param d the 
+     * @param start
+     * @param finish
+     * @return
+     * @throws ApiException 
+     */
     public List<Weather> getWeatherForDeploymentSite(DeploymentSite d, String start, String finish) throws ApiException {
         try {
             start = URLEncoder.encode(start, "UTF-8");
@@ -166,7 +195,7 @@ public class ITLClient {
         }
         
         Type type = new TypeToken<Items<Measurement>>() {}.getType();
-        return getResult(type, "/sensors/%d/measurements/%s/%s/", s, start, finish);
+        return this.<Items<Measurement>>getResult(type, "/sensors/%d/measurements/%s/%s/", s, start, finish).getItems();
     }
 
     public int addMeasurementForSensor(Sensor s, Measurement m) throws ApiException {
@@ -206,6 +235,10 @@ public class ITLClient {
     
     private <T> T getResult(Type type, String url, Object... params) throws ApiException {
         ApiResponse response = getClient(url, params).get();
+        
+        if (!response.success())
+            throw new ApiException("Request error.");
+        
         return response.deserialise(type);
     }
     

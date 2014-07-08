@@ -13,28 +13,28 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Refactored interface to the AlertMe web service
+ * Wraps the AlertMe API.
  *
  * @author Bruce Stephen
  * @date 25th October 2013
  */
 public class AlertMeClient {
+    private String token;
+    private String hubid;
+    private String username;
 
-    protected String token;
-    protected String hubid;
-    protected String username;
-    protected String password;
-
-    protected List<String> deviceIds;
-    protected Map<String, String> ids2device;
-
-    protected static final String urlbase = "https://api.alertme.com/v5";
-
-    public AlertMeClient() {
-        this.deviceIds = new ArrayList<>();
-        this.ids2device = new HashMap<>();
-    }
-
+    private static final String urlbase = "https://api.alertme.com/v5";
+    
+    /**
+     * Authenticates the user with the API.  After a successful authentication,
+     * a token is stored and used by subsequent method calls.  Note that this 
+     * method should be called first.
+     * 
+     * @param username the username to authenticate with
+     * @param password the password to authenticate with
+     * @return true if the authentication succeeded; otherwise, false
+     * @throws ApiException if there is a connection error
+     */
     public boolean authenticateUser(String username, String password) throws ApiException {
         ApiClient client = new ApiClient("%s/login", urlbase);
         client.data("username", username);
@@ -71,6 +71,11 @@ public class AlertMeClient {
         }
     }
 
+    /**
+     * Gets the IDs of the hubs for the currently-authenticated user.
+     * @return a list of hub IDs
+     * @throws ApiException if there is a connection error
+     */
     public List<String> getHubsForUser() throws ApiException {
         AlertMeDevice[] devices = getResponse(AlertMeDevice[].class, "/users/%s/hubs", username);
         List<String> hubs = new ArrayList<>();
@@ -82,6 +87,11 @@ public class AlertMeClient {
         return hubs;
     }
 
+    /**
+     * Gets all the devices for the user's hub.
+     * @return a map mapping device IDs to device types
+     * @throws ApiException if there is a connection error
+     */
     public Map<String, String> getDevicesForHub() throws ApiException {
         AlertMeDevice[] devices = getResponse(AlertMeDevice[].class,
                 "%s/users/%s/hubs/%s/devices", username, this.hubid);
@@ -95,57 +105,67 @@ public class AlertMeClient {
         return map;
     }
 
-    private AlertMeChannel getChannel(String deviceName, String deviceId, String channelName, String operation, String start, String end, int interval) throws ApiException {
-        ApiClient client = new ApiClient("%s/users/%s/hubs/%s/devices/%s/%s/channels/%s",
-                urlbase, username, hubid, deviceName, deviceId, channelName);
-
-        try {
-            client.data("start", Long.toString(ITLClientUtilities.dateStringToSeconds(start)));
-            client.data("end", Long.toString(ITLClientUtilities.dateStringToSeconds(end)));
-        }
-        catch (ParseException ex) {
-            throw new IllegalArgumentException("start or end is an invalid date", ex);
-        }
-
-        client.cookie(token);
-        client.data("interval", Integer.toString(interval));
-        client.data("operation", operation);
-
-        ApiResponse response = client.get();
-        return response.deserialise(AlertMeChannel.class);
-    }
-
+    /**
+     * Gets the maximum power measurements at half hour intervals between the
+     * specified times for the MeterReader device with the specified ID.
+     * @param deviceId the ID of the device to get measurements for
+     * @param start the start time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param end the end time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param interval the number of seconds between measurements
+     * @return a list of Measurement objects
+     * @throws ApiException if there is a connection error
+     */
     public List<Measurement> getPowerFromMeter(String deviceId, String start, String end, int interval) throws ApiException {
-        return getChannel("MeterReader", deviceId, "power", "max+min", start, end, interval).toHalfHourly().getMaxMeasurements();
+        return getChannel("MeterReader", deviceId, "power", "max", start, end, interval).toHalfHourly().getMaxMeasurements();
     }
 
+    /**
+     * Gets the maximum energy measurements between the specified times for the
+     * MeterReader device with the specified ID.
+     * @param deviceId the ID of the device to get measurements for
+     * @param start the start time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param end the end time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param interval the number of seconds between measurements
+     * @return a list of Measurement objects
+     * @throws ApiException if there is a connection error
+     */
     public List<Measurement> getEnergyAdvancesFromMeter(String deviceId, String start, String end, int interval) throws ApiException {
-        return getChannel("MeterReader", deviceId, "energy", "max+min", start, end, interval).getMaxMeasurements();
+        return getChannel("MeterReader", deviceId, "energy", "max", start, end, interval).getMaxMeasurements();
     }
 
+    /**
+     * Gets the maximum temperature measurements between the specified times for
+     * the specified device.
+     * @param deviceName the name of the device to get measurements for
+     * @param deviceId the ID of the device to get measurements for
+     * @param start the start time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param end the end time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param interval the number of seconds between measurements
+     * @return a list of Measurement objects
+     * @throws ApiException if there is a connection error
+     */
     public List<Measurement> getAmbientTemperatureFromDevice(String deviceName, String deviceId, String start, String end, int interval) throws ApiException {
-        return getChannel(deviceName, deviceId, "temperature", "max+min+average", start, end, interval).getMaxMeasurements();
+        return getChannel(deviceName, deviceId, "temperature", "max", start, end, interval).getMaxMeasurements();
     }
 
-    public List<Measurement> getEnergyMeasurementForDeviceAtHalfHour(String deviceid, String dateStart, String dateEnd) throws ApiException {
-        AlertMeChannel channel = getChannel("MeterReader", deviceid, "energy", "max", dateStart, dateEnd, 120)
-                .toHalfHourly();
-
-        long time = channel.getStart() * 1000;
-
-        //get the half hourly results
-        List<Measurement> measurements = new ArrayList<>();
-
-        for (Double observation : channel.getMax()) {
-            String strtime = ITLClientUtilities.millisecondsToDateString(time);
-            measurements.add(new Measurement(strtime, observation));
-
-            time += 1800000;
-        }
-
-        return measurements;
+    /**
+     * Gets the maximum energy measurements at half hour intervals, between the
+     * specified times for the MeterReader device with the specified ID.
+     * @param deviceId the ID of the device to get measurements for
+     * @param start the start time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @param end the end time as a string in the format 'yyyy-MM-dd HH:mm'
+     * @return a list of Measurement objects
+     * @throws ApiException if there is a connection error
+     */
+    public List<Measurement> getEnergyMeasurementForDeviceAtHalfHour(String deviceId, String start, String end) throws ApiException {
+        return getChannel("MeterReader", deviceId, "energy", "max", start, end, 120)
+            .toHalfHourly().getMaxMeasurements();
     }
 
+    /**
+     * Gets a list of sensors.
+     * @return 
+     */
     public List<DeployedSensor> getSensorsForPlatform() {
         List<DeployedSensor> allsense = new ArrayList<>();
         DeployedSensor itemp = new DeployedSensor();
@@ -181,5 +201,25 @@ public class AlertMeClient {
         allsense.add(noise);
 
         return allsense;
+    }
+    
+    private AlertMeChannel getChannel(String deviceName, String deviceId, String channelName, String operation, String start, String end, int interval) throws ApiException {
+        ApiClient client = new ApiClient("%s/users/%s/hubs/%s/devices/%s/%s/channels/%s",
+                urlbase, username, hubid, deviceName, deviceId, channelName);
+
+        try {
+            client.data("start", Long.toString(ITLClientUtilities.dateStringToSeconds(start)));
+            client.data("end", Long.toString(ITLClientUtilities.dateStringToSeconds(end)));
+        }
+        catch (ParseException ex) {
+            throw new IllegalArgumentException("start or end is an invalid date", ex);
+        }
+
+        client.cookie(token);
+        client.data("interval", Integer.toString(interval));
+        client.data("operation", operation);
+
+        ApiResponse response = client.get();
+        return response.deserialise(AlertMeChannel.class);
     }
 }

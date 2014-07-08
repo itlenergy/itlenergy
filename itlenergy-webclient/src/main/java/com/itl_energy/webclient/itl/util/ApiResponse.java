@@ -24,8 +24,8 @@ import java.util.Map;
 public class ApiResponse {
 
     private final int statusCode;
-    private final String response;
-    private final Map<String, List<String>> headers;
+    private String response;
+    private Map<String, List<String>> headers;
     private JsonObject responseObject;
     
     /**
@@ -35,8 +35,11 @@ public class ApiResponse {
      */
     public ApiResponse(HttpURLConnection connection) throws IOException {
         statusCode = connection.getResponseCode();
-        response = readInputStream(connection.getInputStream());
-        headers = connection.getHeaderFields();
+        
+        if (success()) {
+            response = readInputStream(connection.getInputStream());
+            headers = connection.getHeaderFields();
+        }
     }
     
     /**

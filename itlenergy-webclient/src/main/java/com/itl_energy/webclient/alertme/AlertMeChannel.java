@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.itl_energy.webclient.alertme;
 
 import com.itl_energy.webclient.itl.model.Measurement;
@@ -12,11 +7,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
- * @author stewart
+ * Represents the result from an AlertMe API call for a measurement channel.
+ * The client deserialises the JSON response into this class.
  */
 public class AlertMeChannel {
-
     private long start;
     private long end;
     private int interval;
@@ -24,18 +18,34 @@ public class AlertMeChannel {
     
     private List<Double> max, min, average;
 
+    /**
+     * Gets the start time of the readings in seconds.
+     * @return 
+     */
     public long getStart() {
         return start;
     }
 
+    /**
+     * Gets the end time of the readings in seconds.
+     * @return 
+     */
     public long getEnd() {
         return end;
     }
 
+    /**
+     * Gets the number of seconds between readings.
+     * @return 
+     */
     public int getInterval() {
         return interval;
     }
 
+    /**
+     * Gets the maximum values for the channel.
+     * @return 
+     */
     public List<Double> getMax() {
         if (max == null && values != null)
             max = (List<Double>) values.get("max");
@@ -43,10 +53,18 @@ public class AlertMeChannel {
         return max;
     }
     
+    /**
+     * Gets the maximum values for the channel as a list of Measurement objects.
+     * @return 
+     */
     public List<Measurement> getMaxMeasurements() {
         return getMeasurements(getMax());
     }
 
+    /**
+     * Gets the minimum values for the channel.
+     * @return 
+     */
     public List<Double> getMin() {
         if (min == null && values != null)
             min = (List<Double>) values.get("min");
@@ -54,6 +72,10 @@ public class AlertMeChannel {
         return min;
     }
     
+    /**
+     * Gets the average values for the channel.
+     * @return 
+     */
     public List<Double> getAverage() {
         if (average == null && values != null)
             average = (List<Double>) values.get("average");
@@ -61,6 +83,11 @@ public class AlertMeChannel {
         return average;
     }
 
+    /**
+     * Converts the channel to a channel representing measurements taken every
+     * half hour.
+     * @return 
+     */
     public AlertMeChannel toHalfHourly() {
         AlertMeChannel channel = new AlertMeChannel();
         

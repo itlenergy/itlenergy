@@ -1,4 +1,4 @@
-package com.itl_ernergy.android.util;
+package com.itl_energy.android.util;
 
 import android.app.Activity;
 import android.view.View;

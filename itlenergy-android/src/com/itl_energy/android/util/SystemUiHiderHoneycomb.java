@@ -1,4 +1,4 @@
-package com.itl_ernergy.android.util;
+package com.itl_energy.android.util;
 
 import android.annotation.TargetApi;
 import android.app.Activity;

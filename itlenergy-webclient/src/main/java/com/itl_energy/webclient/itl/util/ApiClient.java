@@ -151,11 +151,11 @@ public class ApiClient {
             connection.setRequestMethod(method);
             connection.setUseCaches(false);
             connection.setDoInput(true);
-            connection.setDoOutput(true);
             connection.setRequestProperty("Accept", "application/json");
 
             //if it's not a GET request, the data needs to be written to the request
             if (!method.equals("GET")) {
+                connection.setDoOutput(true);
                 byte[] bytes = null;
 
                 //do we need to send a JSON or a urlencoded request?
@@ -169,7 +169,6 @@ public class ApiClient {
                         json = gson.toJson(requestObject, type);
                     
                     bytes = json.getBytes();
-                    connection.setRequestProperty("Content-Type", "application/json");
                 }
                 else if (parameters.size() > 0) {
                     bytes = serialiseData().getBytes();
@@ -179,6 +178,7 @@ public class ApiClient {
 
                 //if we have a request body now, send it
                 if (bytes != null) {
+                    connection.setRequestProperty("Content-Type", "application/json");
                     connection.setRequestProperty("Content-Length", Integer.toString(bytes.length));
 
                     try (DataOutputStream wr = new DataOutputStream(connection.getOutputStream())) {

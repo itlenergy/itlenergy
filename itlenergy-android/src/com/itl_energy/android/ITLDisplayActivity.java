@@ -1,4 +1,4 @@
-package com.itl_ernergy.android;
+package com.itl_energy.android;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-import com.itl_ernergy.android.graphics.DateManipulator;
-import com.itl_ernergy.android.util.SystemUiHider;
+import com.itl_energy.android.graphics.DateManipulator;
+import com.itl_energy.android.util.SystemUiHider;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -25,13 +25,13 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.ListView;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.itl_energy.android.R;
 import com.itl_energy.webclient.itl.ITLClient;
 import com.itl_energy.webclient.itl.model.DeployedSensor;
 import com.itl_energy.webclient.itl.model.Measurement;
@@ -120,7 +120,7 @@ public class ITLDisplayActivity extends Activity implements OnItemClickListener,
         dateView.setOnSeekBarChangeListener(this);
 
         try {
-            DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.UK);
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.UK);
 
             String beginTime = "2013-06-01 00:00";
             String endTime = "2014-02-01 00:00";
@@ -143,11 +143,12 @@ public class ITLDisplayActivity extends Activity implements OnItemClickListener,
             dateView.setMax((int) updays);//60 day window?
         }
         catch (ParseException e) {
-            ExceptionDialog dialog = new ExceptionDialog(this.getApplicationContext());
+            ExceptionDialog dialog = new ExceptionDialog(this);
             dialog.show("Could not parse dates.");
         }
 
-        this.controller = new ITLClient("http://itl.itl-energy.com");
+        //this.controller = new ITLClient("http://10.0.2.2:8282/itlenergy-web/api");
+        this.controller = new ITLClient("http://itl.itl-energy.com/api");
     }
 
     @Override
@@ -171,65 +172,64 @@ public class ITLDisplayActivity extends Activity implements OnItemClickListener,
 
             // Inflate and set the layout for the dialog
             // Pass null as the parent view because its going in the dialog layout
-            builder.setView(inflater.inflate(R.layout.authentication_itl_display, null));
+            final View loginView = inflater.inflate(R.layout.authentication_itl_display, null);
+            
+            final AlertDialog loginDialog = builder
+                .setView(loginView)
+                .setTitle("ITL Login")
+                .setPositiveButton("Login", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        try {
+                            EditText username = (EditText)loginView.findViewById(R.id.username);
+                            EditText password = (EditText)loginView.findViewById(R.id.password);
 
-            builder.setTitle("ITL Login");
+                            if (!controller.beginSession(username.getText().toString(), password.getText().toString())) {
+                                ExceptionDialog exdialog = new ExceptionDialog(context);
+                                exdialog.show("Invalid username or password");
+                            }
+                            else
+                            {
+                                //progress bar
+                                int hid = 19;
 
-            // Add action buttons
-            builder.setPositiveButton("Login", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int id) {
-                    dialog.dismiss();
-                    try {
-                        if (!controller.beginSession("username", "password")) {
-                            //TODO replace this with a dialog
-                            System.err.println("Failed to login...");
-                            //set controller to NULL?
-                            //return?
+                                //list sensors
+                                List<DeployedSensor> dsns = controller.getDeployedSensorsForSite(null);
+                                List<Sensor> sns = controller.getSensorsForHub(hid);
+                                String[] sensorArray = new String[sns.size()];
+
+                                for (DeployedSensor dsn : dsns) {
+                                    id2dsensor.put(dsn.getTypeid(), dsn);
+                                }
+
+                                //populate list
+                                for (int i = 0; i < sns.size(); i++) {
+                                    sensorArray[i] = sns.get(i).getDescription();
+                                    id2sensor.put(sns.get(i).getDescription(), sns.get(i));
+                                }
+
+                                // This is the array adapter, it takes the context of the activity as a 
+                                // first parameter, the type of list view as a second parameter and your 
+                                // array as a third parameter.
+                                CustomArrayAdapter arrayAdapter = new CustomArrayAdapter(controlsView.getContext(), android.R.layout.simple_list_item_1, sensorArray);
+
+                                controlsView.setAdapter(arrayAdapter);
+                            }
                         }
-                        else
-                        {
-                            //progress bar
-                            int hid = 19;
-
-                            //list sensors
-                            List<DeployedSensor> dsns = controller.getDeployedSensorsForSite(null);
-                            List<Sensor> sns = controller.getSensorsForHub(hid);
-                            String[] sensorArray = new String[sns.size()];
-
-                            for (DeployedSensor dsn : dsns) {
-                                id2dsensor.put(dsn.getTypeid(), dsn);
-                            }
-
-                            //populate list
-                            for (int i = 0; i < sns.size(); i++) {
-                                sensorArray[i] = sns.get(i).getDescription();
-                                id2sensor.put(sns.get(i).getDescription(), sns.get(i));
-                            }
-
-                            // This is the array adapter, it takes the context of the activity as a 
-                            // first parameter, the type of list view as a second parameter and your 
-                            // array as a third parameter.
-                            CustomArrayAdapter arrayAdapter = new CustomArrayAdapter(controlsView.getContext(), android.R.layout.simple_list_item_1, sensorArray);
-
-                            controlsView.setAdapter(arrayAdapter);
+                        catch (ApiException ex) {
+                            ExceptionDialog exdialog = new ExceptionDialog(context);
+                            exdialog.show(ex.getMessage());
                         }
                     }
-                    catch (ApiException ex) {
-                        ExceptionDialog exdialog = new ExceptionDialog(context);
-                        exdialog.show(ex.getMessage());
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
                     }
-                }
-            });
+                })
+                .create();
 
-            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int id) {
-                    dialog.cancel();
-                }
-            });
-
-            AlertDialog dialog = builder.create();
-            dialog.show();
+            loginDialog.show();
         }
         catch (Exception e) {
             e.printStackTrace(System.err);

@@ -54,7 +54,8 @@ public class AuthenticationService {
         Integer related = user.getRelatedId();
         
         SecurityTicket ticket = new SecurityTicket(expires, username, user.getRole(), related != null ? related : 0, false);
-        return new TicketModel(ticket.encrypt(AuthenticationServiceConfig.key, AuthenticationServiceConfig.secret), ticket.getExpires());
+        String encrypted = ticket.encrypt(AuthenticationServiceConfig.key, AuthenticationServiceConfig.secret);
+        return new TicketModel(encrypted, ticket.getExpires());
     }
     
     
