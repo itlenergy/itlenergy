@@ -321,7 +321,8 @@ public class AdminControlPanel extends JFrame implements ActionListener, WindowL
 
                 site.setUserObject(tsob3);
 
-                List<DeployedSensor> depsens = this.controller.getDeployedSensorsForSite(dep.get(i));
+                //TODO: what's going on here?
+                List<DeployedSensor> depsens = this.controller.getDeployedSensors();
 
                 for (DeployedSensor depsen : depsens) {
                     DefaultMutableTreeNode dsense = new DefaultMutableTreeNode(depsen.getDescription());

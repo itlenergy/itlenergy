@@ -194,7 +194,7 @@ public class ITLDisplayActivity extends Activity implements OnItemClickListener,
                                 int hid = 19;
 
                                 //list sensors
-                                List<DeployedSensor> dsns = controller.getDeployedSensorsForSite(null);
+                                List<DeployedSensor> dsns = controller.getDeployedSensors();
                                 List<Sensor> sns = controller.getSensorsForHub(hid);
                                 String[] sensorArray = new String[sns.size()];
 

@@ -113,12 +113,12 @@ public class ITLClient {
         }
 
         Type type = new TypeToken<Items<Weather>>() {}.getType();
-        return this.<Items<Weather>>getResult(type, "/weather/%s/%s/", start, finish).getItems();
+        return this.<Items<Weather>>getResult(type, "/sites/%d/weather/%s/%s/", d.getSiteid(), start, finish).getItems();
     }
 
     public List<Weather> getWeatherForDeploymentSite(DeploymentSite d) throws ApiException {
         Type type = new TypeToken<Items<Weather>>() {}.getType();
-        return this.<Items<Weather>>getResult(type, "/weather").getItems();
+        return this.<Items<Weather>>getResult(type, "/sites/%d/weather", d.getSiteid()).getItems();
     }
 
     public void insertWeatherForDeploymentSite(DeploymentSite d, List<Weather> weather) throws ApiException {
@@ -145,7 +145,7 @@ public class ITLClient {
         return addObject(m, null, "/houses");
     }
 
-    public List<DeployedSensor> getDeployedSensorsForSite(DeploymentSite d) throws ApiException {
+    public List<DeployedSensor> getDeployedSensors() throws ApiException {
         Type type = new TypeToken<Items<DeployedSensor>>() {}.getType();
         return this.<Items<DeployedSensor>>getResult(type, "/deployedsensors").getItems();
     }
