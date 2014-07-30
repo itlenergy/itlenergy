@@ -1,6 +1,5 @@
 build/
 target/
-tools/
 sql/migration.sql
 server.log
 .settings/
