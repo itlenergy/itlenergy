@@ -13,6 +13,18 @@
     <class>com.itl_energy.model.DeployedSensor</class>
     <class>com.itl_energy.model.Site</class>
     <class>com.itl_energy.model.House</class>
+    <class>com.itl_energy.model.Site_1</class>
+    <class>com.itl_energy.model.Generation</class>
+    <class>com.itl_energy.model.Tariff</class>
+    <class>com.itl_energy.model.TariffBlock</class>
+    <class>com.itl_energy.model.Hub_1</class>
+    <class>com.itl_energy.model.ForecastStatus</class>
+    <class>com.itl_energy.model.WeatherForecast</class>
+    <class>com.itl_energy.model.Actuations</class>
+    <class>com.itl_energy.model.House_1</class>
+    <class>com.itl_energy.model.Sensor_1</class>
+    <class>com.itl_energy.model.ElectricalLoad</class>
+    <class>com.itl_energy.model.ElectricalLoadForecast</class>
     <exclude-unlisted-classes>false</exclude-unlisted-classes>
     <properties/>
   </persistence-unit>

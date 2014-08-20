@@ -7,7 +7,7 @@
             statement-timeout-in-seconds="60" >
         <property name="serverName" value="localhost" />
         <property name="portNumber" value="5433" />
-        <property name="databaseName" value="itlenergy" />
+        <property name="databaseName" value="apatsche" />
         <property name="User" value="postgres" />
         <property name="Password" value="postgres" />
     </jdbc-connection-pool>

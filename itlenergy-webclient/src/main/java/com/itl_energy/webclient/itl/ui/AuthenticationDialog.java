@@ -38,7 +38,7 @@ public class AuthenticationDialog extends JDialog implements ActionListener {
 
         initComponents();
 
-		//this.setLocation(this.getParent().getX()+(int)0.5*(this.getParent().getWidth()-this.getWidth()), this.getParent().getY()+(int)0.5*(this.getParent().getHeight()-this.getHeight()));
+        //this.setLocation(this.getParent().getX()+(int)0.5*(this.getParent().getWidth()-this.getWidth()), this.getParent().getY()+(int)0.5*(this.getParent().getHeight()-this.getHeight()));
         this.setLocationRelativeTo(parent);
     }
 
@@ -70,7 +70,6 @@ public class AuthenticationDialog extends JDialog implements ActionListener {
         jPanel1.setBorder(javax.swing.BorderFactory.createTitledBorder("Enter Authentication Details"));
 
         jPasswordField2.setText("jPasswordField2");
-
         jTextField2.setText("jTextField2");
 
         jLabel3.setText("Username");
@@ -162,8 +161,8 @@ public class AuthenticationDialog extends JDialog implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent ae) {
         if (ae.getSource() == this.jButton1) {
-            this.uname =/*this.jTextField2.getText()*/ "apatsche2";
-            this.password =/*new String(this.jPasswordField2.getPassword())*/ "cts506hnd";
+            this.uname =this.jTextField2.getText();
+            this.password =new String(this.jPasswordField2.getPassword());
         }
 
         this.dispose();

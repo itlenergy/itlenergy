@@ -103,8 +103,8 @@ public class AdminControlPanel extends JFrame implements ActionListener, WindowL
     public AdminControlPanel() {
         super("ITL Domestic Metering Database");
 
-        this.controller = new ITLClient("http://localhost:8282/apatsche-web");
-        //this.controller=new ITLWSInterface("http://itl.stugo.co.uk");
+        this.controller = new ITLClient("http://itl.itl-energy.com/api");
+        
         this.lookup = TrialContextStore.load();
 
         this.loadprofile = new LoadProfileDisplayControl();
@@ -277,13 +277,22 @@ public class AdminControlPanel extends JFrame implements ActionListener, WindowL
         //Show authentication dialog
         //Once authenticated, start renew thread
         try {
+            int attempt=0;
+            
             this.gate = new AuthenticationDialog(this);
 
             this.gate.promptForCredentials();
 
             while (this.controller.beginSession(this.gate.getUsername(), this.gate.getPassword()) == false) {
                 JOptionPane.showMessageDialog(this, "The username and/or password are not recognised", "Login Failed", JOptionPane.ERROR_MESSAGE);
-                this.gate.promptForCredentials();
+                
+                if(attempt<3)
+                    this.gate.promptForCredentials();
+                else
+                    {
+                    JOptionPane.showMessageDialog(this, "Too many login attempts.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+                    System.exit(-1);
+                    }
             }
 
             DefaultMutableTreeNode top = new DefaultMutableTreeNode("Deployment Sites");
@@ -511,7 +520,12 @@ public class AdminControlPanel extends JFrame implements ActionListener, WindowL
     }
 
     public static void main(String[] args) {
+        
+        
         AdminControlPanel acp = new AdminControlPanel();
+        
+        
+        
     }
 
     @Override
