@@ -16,7 +16,7 @@ public class Hub {
 
     protected int hubId;
     protected int houseId;
-    protected Date lastUpdate;
+    protected long lastUpdate;
     protected int freeStorage;
 
     public Hub() {
@@ -27,7 +27,7 @@ public class Hub {
         super();
         this.hubId = hubId;
         this.houseId = houseId;
-        this.lastUpdate = lastUpdate;
+        this.lastUpdate = lastUpdate.getTime();
         this.freeStorage = freeStorage;
     }
 
@@ -48,11 +48,11 @@ public class Hub {
     }
 
     public Date getLastUpdate() {
-        return lastUpdate;
+        return new Date(lastUpdate);
     }
 
     public void setLastUpdate(Date lastUpdate) {
-        this.lastUpdate = lastUpdate;
+        this.lastUpdate = lastUpdate.getTime();
     }
 
     public int getFreeStorage() {
