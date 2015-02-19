@@ -36,8 +36,13 @@ public class ItlEnergyApplication extends javax.ws.rs.core.Application {
      * given list with all resources defined in the project.
      */
     private void addRestResourceClasses(Set<Class<?>> resources) {
+        resources.add(com.itl_energy.webapi.ActuationsResource.class);
         resources.add(com.itl_energy.webapi.AuthenticationResource.class);
         resources.add(com.itl_energy.webapi.DeployedSensorResource.class);
+        resources.add(com.itl_energy.webapi.ElectricalLoadForecastResource.class);
+        resources.add(com.itl_energy.webapi.ElectricalLoadResource.class);
+        resources.add(com.itl_energy.webapi.ForecastStatusResource.class);
+        resources.add(com.itl_energy.webapi.GenerationResource.class);
         resources.add(com.itl_energy.webapi.HouseResource.class);
         resources.add(com.itl_energy.webapi.HubLogResource.class);
         resources.add(com.itl_energy.webapi.HubResource.class);
@@ -46,7 +51,10 @@ public class ItlEnergyApplication extends javax.ws.rs.core.Application {
         resources.add(com.itl_energy.webapi.SensorResource.class);
         resources.add(com.itl_energy.webapi.SiteResource.class);
         resources.add(com.itl_energy.webapi.StatusEventResource.class);
+        resources.add(com.itl_energy.webapi.TariffBlockResource.class);
+        resources.add(com.itl_energy.webapi.TariffResource.class);
         resources.add(com.itl_energy.webapi.UserResource.class);
+        resources.add(com.itl_energy.webapi.WeatherForecastResource.class);
         resources.add(com.itl_energy.webapi.WeatherResource.class);
         resources.add(com.itl_energy.webcore.NotAuthorizedHandler.class);
     }

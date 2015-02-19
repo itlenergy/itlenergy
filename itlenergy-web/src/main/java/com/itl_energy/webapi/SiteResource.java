@@ -28,6 +28,7 @@ import com.itl_energy.webcore.AuthRoles;
  * The Web API RESTful interface to the Sites collection.
  * 
  * @author Gordon Mackenzie-Leigh <gordon@stugo.co.uk>
+ * @author Bruce Stephen
  */
 @Path("sites")
 @Stateless

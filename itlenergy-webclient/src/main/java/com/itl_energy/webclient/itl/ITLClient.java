@@ -5,6 +5,14 @@ import com.google.gson.reflect.TypeToken;
 import java.util.List;
 import java.util.Map;
 
+import com.itl_energy.webclient.itl.model.Actuations;
+import com.itl_energy.webclient.itl.model.ElectricalLoad;
+import com.itl_energy.webclient.itl.model.ElectricalLoadForecast;
+import com.itl_energy.webclient.itl.model.ForecastStatus;
+import com.itl_energy.webclient.itl.model.Generation;
+import com.itl_energy.webclient.itl.model.Tariff;
+import com.itl_energy.webclient.itl.model.TariffBlock;
+import com.itl_energy.webclient.itl.model.WeatherForecast;
 import com.itl_energy.webclient.itl.model.DeployedSensor;
 import com.itl_energy.webclient.itl.model.DeploymentSite;
 import com.itl_energy.webclient.itl.model.Hub;
@@ -135,6 +143,47 @@ public class ITLClient {
         return addObject(weather, null, "/sites/%d/weather", d.getSiteid());
     }
 
+        /**
+     * Gets a list of weather observations between the specified times for the 
+     * specified site.
+     * @param d the 
+     * @param start
+     * @param finish
+     * @return
+     * @throws ApiException 
+     */
+    public List<WeatherForecast> getWeatherForecastForDeploymentSite(DeploymentSite d, String start, String finish) throws ApiException {
+        try {
+            start = URLEncoder.encode(start, "UTF-8");
+            finish = URLEncoder.encode(finish, "UTF-8");
+        }
+        catch (UnsupportedEncodingException ex) {
+            throw new ApiException(ex);
+        }
+
+        Type type = new TypeToken<Items<Weather>>() {}.getType();
+        return this.<Items<WeatherForecast>>getResult(type, "/sites/%d/weather_forecast/%s/%s/", d.getSiteid(), start, finish).getItems();
+    }
+
+    public List<WeatherForecast> getWeatherForecastForDeploymentSite(DeploymentSite d) throws ApiException {
+        Type type = new TypeToken<Items<WeatherForecast>>() {}.getType();
+        return this.<Items<WeatherForecast>>getResult(type, "/sites/%d/weather_forecast", d.getSiteid()).getItems();
+    }
+
+    public void insertWeatherForecastForDeploymentSite(DeploymentSite d, List<WeatherForecast> weatherf) throws ApiException {
+        Type type = new TypeToken<Items<WeatherForecast>>() {}.getType();
+        Items<WeatherForecast> items = new Items<>(weatherf);
+        
+        ApiResponse response = getClient("/sites/%d/weather_forecast", d.getSiteid()).post(items, type);
+        
+        if (!response.success())
+            throw new ApiException("Could not add weather forecast.");
+    }
+
+    public int insertWeatherForecastForDeploymentSite(DeploymentSite d, WeatherForecast weatherf) throws ApiException {
+        return addObject(weatherf, null, "/sites/%d/weather_forecast", d.getSiteid());
+    }
+    
     public List<MeteredPremises> getMeteredPremisesForSite(DeploymentSite d) throws ApiException {
         Type type = new TypeToken<Items<MeteredPremises>>() {}.getType();
         return this.<Items<MeteredPremises>>getResult(type, "/sites/%d/houses", d.getSiteid()).getItems();
@@ -217,6 +266,41 @@ public class ITLClient {
             throw new ApiException("Could not add measurements.");
     }
     
+    public List<Actuations> getActuationsForSensor(Sensor s, String start, String finish) throws ApiException {
+        return this.getActuationsForSensor(s.getSensorId(), start, finish);
+    }
+
+    public List<Actuations> getActuationsForSensor(int s, String start, String finish) throws ApiException {
+        try {
+            start = URLEncoder.encode(start, "UTF-8");
+            finish = URLEncoder.encode(finish, "UTF-8");
+        }
+        catch (UnsupportedEncodingException ex) {
+            throw new ApiException(ex);
+        }
+        
+        Type type = new TypeToken<Items<Actuations>>() {}.getType();
+        return this.<Items<Actuations>>getResult(type, "/sensors/%d/actuations/%s/%s/", s, start, finish).getItems();
+    }
+
+    public int addActuationsForSensor(Sensor s, Actuations m) throws ApiException {
+        m.setSensorId(s.getSensorId());
+        return addObject(m, null, "/actuations");
+    }
+
+    public void addActuationsForSensor(Sensor s, List<Actuations> m) throws ApiException {
+        this.addActuationsForSensor(s.getSensorId(), m);
+    }
+
+    public void addActuationsForSensor(int sid, List<Actuations> m) throws ApiException {
+        Type type = new TypeToken<Items<Actuations>>() {}.getType();
+        Items<Actuations> items = new Items<>(m);
+        
+        ApiResponse response = getClient("/sensors/%d/actuations", sid).post(items, type);
+        
+        if (!response.success())
+            throw new ApiException("Could not add actuations.");
+    }
     
     private int addObject(Object object, Type type, String url, Object... params) throws ApiException {
         ApiResponse response = getClient(url, params).post(object, type);
